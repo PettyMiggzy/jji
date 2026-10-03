@@ -238,7 +238,7 @@ def footer():
 <div><div class="font-semibold mb-3">Service Area</div>{cities}</div>
 <div><div class="font-semibold mb-3">Contact</div><a href="tel:{PHONE_TEL}" class="block text-bone/60 hover:text-ember">{PHONE_DISPLAY}</a><a href="sms:{PHONE_TEL}" class="block text-bone/60 hover:text-ember">Text us photos</a><a href="mailto:quote@junkjunkiesindiana.com" class="block text-bone/60 hover:text-ember">quote@junkjunkiesindiana.com</a><address class="not-italic text-bone/60 mt-2">{STREET}<br>Indianapolis, IN {ZIP}</address>
 <div class="mt-6 font-semibold mb-3">Sister sites</div><a rel="noopener" href="https://junkjunkiestexas.com" class="block text-bone/60 hover:text-ember">Junk Junkies Texas</a><a rel="noopener" href="https://junkjunkiesflorida.com" class="block text-bone/60 hover:text-ember">Junk Junkies Florida</a></div>
-</div><div class="max-w-7xl mx-auto px-5 mt-12 text-xs text-bone/40">© {datetime.date.today().year} Junk Junkies Indiana. All rights reserved.</div></footer>
+</div><div class="max-w-7xl mx-auto px-5 mt-12 text-xs text-bone/40">© {datetime.date.today().year} Junk Junkies Indiana. All rights reserved. Also serving Central Florida: <a href="https://junkjunkiesflorida.site/" class="hover:text-ember">Junk Removal Haines City, FL</a>.</div></footer>
 <div class="md:hidden fixed bottom-0 inset-x-0 z-50 bg-ink/95 backdrop-blur border-t border-line grid grid-cols-3 text-center text-sm font-bold"><a href="tel:{PHONE_TEL}" class="py-4 border-r border-line">Call</a><a href="sms:{PHONE_TEL}?body=Hi%20Junk%20Junkies%2C%20I%20need%20a%20quote%20for%3A" class="py-4 border-r border-line">Text</a><a href="#quote" class="py-4 bg-ember text-ink">Quote</a></div>
 <script src="/assets/form.js" defer></script></body></html>'''
 
