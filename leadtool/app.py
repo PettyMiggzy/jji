@@ -119,7 +119,8 @@ def search_leads():
             return jsonify({'error': 'Invalid property type'}), 400
 
         try:
-            leads = find_leads(property_type, lat, lon, radius, limit)
+            warnings = []
+            leads = find_leads(property_type, lat, lon, radius, limit, warnings)
         except RuntimeError as exc:
             return jsonify({'error': f'Business data source unavailable, try again shortly. ({exc})'}), 503
 
@@ -137,7 +138,8 @@ def search_leads():
             'radius': radius,
             'property_type': property_type,
             'lead_count': len(leads),
-            'leads': leads
+            'leads': leads,
+            'warnings': warnings
         }), 200
 
     except Exception as e:

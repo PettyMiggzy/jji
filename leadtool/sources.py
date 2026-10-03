@@ -241,9 +241,14 @@ def query_google_places(category, lat, lon, radius_miles, api_key):
         for _ in range(3):
             try:
                 resp = requests.post(GOOGLE_URL, json=body, headers=headers, timeout=15)
-                resp.raise_for_status()
+                if resp.status_code != 200:
+                    try:
+                        detail = resp.json().get("error", {}).get("message", "")
+                    except ValueError:
+                        detail = ""
+                    raise RuntimeError(f"Google Places error {resp.status_code}: {detail[:200]}")
                 data = resp.json()
-            except (requests.RequestException, ValueError):
+            except requests.RequestException:
                 errors += 1
                 break
             for pl in data.get("places", []):
@@ -262,7 +267,7 @@ def query_google_places(category, lat, lon, radius_miles, api_key):
                 break
             body["pageToken"] = data["nextPageToken"]
     if errors and not found:
-        raise RuntimeError("Google Places unavailable")
+        raise RuntimeError("Google Places unavailable (network error)")
     return found
 
 
@@ -271,7 +276,7 @@ def is_directory(url):
     return any(host == d or host.endswith("." + d) for d in DIRECTORY_HOSTS)
 
 
-def find_leads(category, lat, lon, radius_miles, limit):
+def find_leads(category, lat, lon, radius_miles, limit, warnings=None):
     """Return up to `limit` real leads that have a verified published email."""
     label = CATEGORIES[category][0]
     businesses, source_errors = {}, []
@@ -287,6 +292,9 @@ def find_leads(category, lat, lon, radius_miles, limit):
                 add(biz)
         except RuntimeError as exc:
             source_errors.append(str(exc))
+            if warnings is not None:
+                warnings.append(str(exc))
+            print(f"[!] {exc}")
     try:
         for biz in query_nominatim(category, lat, lon, radius_miles):
             add(biz)

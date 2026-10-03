@@ -222,7 +222,7 @@
 
                 // Display results
                 displayResults(data);
-                showSuccess(`Found ${data.lead_count} leads!`);
+                showSuccess(`Found ${data.lead_count} leads.` + (data.warnings && data.warnings.length ? ' Note: ' + data.warnings.join(' | ') : ''));
 
             } catch (error) {
                 showError(error.message);
