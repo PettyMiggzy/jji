@@ -6,14 +6,15 @@ Flask app that finds potential junk-removal customers (apartment complexes, trai
 
 No emails are guessed or generated. Every email comes from a business listing or from that business's own website.
 
-1. **Geocode** the location (Nominatim) and compute the radius.
+1. **Locate** the search center from a US ZIP code or "City, ST" using a bundled lookup table (GeoNames postal codes, CC BY 4.0, https://www.geonames.org). This never calls a rate-limited web service. Other text falls back to Nominatim.
 2. **Find businesses** inside the radius:
-   - Google Places text search, only when `GOOGLE_MAPS_API_KEY` is set (best coverage).
-   - OpenStreetMap via Nominatim and Overpass (free, but sparse: many businesses publish no email).
+   - **Overture Maps places** (free open dataset on public S3, queried with DuckDB): nationwide listings with websites and sometimes emails. Main source.
+   - Google Places text search, only when `GOOGLE_MAPS_API_KEY` is set and billing is enabled.
+   - OpenStreetMap via Nominatim and Overpass as a top-up when results are thin (free, sparse).
 3. **Get the email**: use the listing's email tag if present, otherwise fetch the business's homepage plus `/contact` and `/contact-us` (robots.txt respected), reading `mailto:` links and visible addresses. Directory and social sites (Yelp, Facebook, etc.) are skipped because their emails are not the business's.
 4. **Check the email**: syntax plus DNS (domain can receive mail). This does not prove a mailbox exists. Role mailboxes like `donations@` and `noreply@` are dropped, and duplicates are removed.
 
-Search time is bounded (about 75 seconds worst case) to fit hosting limits. Emails are never sent by this tool.
+Search time is bounded to fit hosting limits. Emails are never sent by this tool.
 
 ## Run locally
 
@@ -40,6 +41,7 @@ python app.py          # http://localhost:5000
 
 ## Known limits
 
-- OpenStreetMap-only searches return few leads; add a Google Places key for volume.
+- Small towns have few listings; widen the radius. Overture data can be months old.
+- A search takes roughly 30 to 45 seconds because business websites are read live.
 - Website email extraction only finds addresses the site publishes.
 - Respect CAN-SPAM and each recipient's opt-out if you ever email these contacts.
