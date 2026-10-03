@@ -1,6 +1,7 @@
 #!/bin/bash
 # Startup script for Junk Junkies Lead Generator
 
+cd "$(dirname "$0")"
 echo "🚀 Starting Junk Junkies Lead Generator..."
 
 # Install dependencies if needed

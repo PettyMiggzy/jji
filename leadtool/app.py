@@ -15,6 +15,7 @@ from geocoding import get_coordinates
 import os
 from dotenv import load_dotenv
 from functools import wraps
+import hmac
 
 load_dotenv()
 
@@ -24,7 +25,7 @@ CORS(app)
 # Database configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///junk_junkies.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.secret_key = 'junk_junkies_secret_key_bankz_2024'
+app.secret_key = os.environ['SECRET_KEY']
 
 # Initialize database
 db.init_app(app)
@@ -33,7 +34,7 @@ with app.app_context():
     db.create_all()
 
 # Admin password
-ADMIN_PASSWORD = 'Bankz'
+ADMIN_PASSWORD = os.environ['ADMIN_PASSWORD']
 
 def login_required(f):
     """Decorator to check if admin is logged in"""
@@ -58,7 +59,7 @@ def admin_login():
     """Admin login page"""
     if request.method == 'POST':
         password = request.form.get('password')
-        if password == ADMIN_PASSWORD:
+        if password and hmac.compare_digest(password, ADMIN_PASSWORD):
             session['admin_logged_in'] = True
             return redirect(url_for('admin_dashboard'))
         else:
