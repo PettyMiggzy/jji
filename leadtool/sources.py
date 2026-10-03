@@ -4,6 +4,7 @@ plus the contact emails those businesses publish on their own websites.
 No emails are guessed or generated; every returned email was found in a tag or a page.
 """
 
+import os
 import re
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError as FuturesTimeout
@@ -22,7 +23,9 @@ OVERPASS_MIRRORS = [
 USER_AGENT = "JunkJunkiesLeadTool/1.0 (school project; contact via repo PettyMiggzy/jji)"
 METERS_PER_MILE = 1609.34
 MAX_RADIUS_MILES = 50
-OVERPASS_BUDGET = 50
+OVERPASS_BUDGET = 20
+NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
+DIRECTORY_HOSTS = ("facebook.com","yelp.com","yellowpages.com","mapquest.com","bbb.org","linkedin.com","zillow.com","apartments.com","directionus.com","instagram.com","x.com","twitter.com","google.com","manta.com","chamberofcommerce.com","trulia.com","realtor.com","rent.com","apartmentlist.com")
 SITE_TIME_BUDGET = 25
 MAX_PAGE_BYTES = 1_500_000
 CONTACT_PATHS = ["", "/contact", "/contact-us"]
@@ -47,8 +50,21 @@ CATEGORIES = {
     ),
 }
 
+SEARCH_TERMS = {
+    "apartments": ["apartments", "apartment homes", "apartment community", "lofts"],
+    "trailers": ["mobile home park", "trailer park"],
+    "housing_companies": ["property management", "real estate", "realty", "leasing office"],
+}
+
+# OSM (category, type) pairs accepted for each lead type; filters out unrelated name matches.
+ALLOWED_OSM_TYPES = {
+    "apartments": {("building", "apartments"), ("landuse", "residential"), ("office", "property_management")},
+    "trailers": {("landuse", "residential"), ("tourism", "caravan_site")},
+    "housing_companies": {("office", "property_management"), ("office", "estate_agent"), ("shop", "estate_agent")},
+}
+
 JUNK_EMAIL = re.compile(
-    r"(\.(png|jpe?g|gif|svg|webp|css|js)$)|example\.|sentry|wixpress|@2x|noreply|no-reply|donotreply|u003e",
+    r"(^(donations?|careers?|jobs?|hr|press|media|privacy|abuse|webmaster|unsubscribe|billing|accounting)@)|(\.(png|jpe?g|gif|svg|webp|css|js)$)|example\.|sentry|wixpress|@2x|noreply|no-reply|donotreply|u003e",
     re.I,
 )
 EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
@@ -159,14 +175,130 @@ def email_from_website(website):
     return None
 
 
+def miles_between(lat1, lon1, lat2, lon2):
+    from math import asin, cos, radians, sin, sqrt
+    dlat, dlon = radians(lat2 - lat1), radians(lon2 - lon1)
+    h = sin(dlat / 2) ** 2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlon / 2) ** 2
+    return 3958.8 * 2 * asin(sqrt(h))
+
+
+def query_nominatim(category, lat, lon, radius_miles):
+    """OSM search by business type inside a bounding box, filtered to the true radius."""
+    from math import cos, radians
+    radius = min(radius_miles, MAX_RADIUS_MILES)
+    dlat = radius / 69.0
+    dlon = radius / (69.0 * max(cos(radians(lat)), 0.1))
+    viewbox = f"{lon - dlon},{lat + dlat},{lon + dlon},{lat - dlat}"
+    label = CATEGORIES[category][0]
+    found, errors = [], 0
+    for i, term in enumerate(SEARCH_TERMS[category]):
+        if i:
+            time.sleep(1.1)  # Nominatim usage policy: max 1 request per second
+        try:
+            resp = requests.get(
+                NOMINATIM_URL,
+                params={"q": term, "format": "jsonv2", "extratags": 1, "addressdetails": 0,
+                        "bounded": 1, "viewbox": viewbox, "limit": 40},
+                headers={"User-Agent": USER_AGENT}, timeout=15,
+            )
+            resp.raise_for_status()
+            results = resp.json()
+        except (requests.RequestException, ValueError):
+            errors += 1
+            continue
+        for r in results:
+            if (r.get("category"), r.get("type")) not in ALLOWED_OSM_TYPES[category]:
+                continue
+            if miles_between(lat, lon, float(r["lat"]), float(r["lon"])) > radius:
+                continue
+            found.append(element_to_business({"tags": {**(r.get("extratags") or {}), "name": r.get("name") or ""}}, label))
+    if errors == len(SEARCH_TERMS[category]):
+        raise RuntimeError("Nominatim unavailable")
+    return found
+
+
+GOOGLE_TERMS = {
+    "apartments": ["apartment complex", "apartment community"],
+    "trailers": ["mobile home park", "trailer park"],
+    "housing_companies": ["property management company", "real estate agency"],
+}
+GOOGLE_URL = "https://places.googleapis.com/v1/places:searchText"
+
+
+def query_google_places(category, lat, lon, radius_miles, api_key):
+    """Google Places (New) text search; needs GOOGLE_MAPS_API_KEY. Returns businesses with websites."""
+    radius_m = min(radius_miles * METERS_PER_MILE, 50000)  # Places circle bias max is 50 km
+    label = CATEGORIES[category][0]
+    headers = {
+        "X-Goog-Api-Key": api_key,
+        "X-Goog-FieldMask": "places.displayName,places.websiteUri,places.nationalPhoneNumber,places.formattedAddress,places.location,nextPageToken",
+        "Content-Type": "application/json",
+    }
+    found, errors = [], 0
+    for term in GOOGLE_TERMS[category]:
+        body = {"textQuery": term, "pageSize": 20,
+                "locationRestriction": {"circle": {"center": {"latitude": lat, "longitude": lon}, "radius": radius_m}}}
+        for _ in range(3):
+            try:
+                resp = requests.post(GOOGLE_URL, json=body, headers=headers, timeout=15)
+                resp.raise_for_status()
+                data = resp.json()
+            except (requests.RequestException, ValueError):
+                errors += 1
+                break
+            for pl in data.get("places", []):
+                loc = pl.get("location") or {}
+                if loc and miles_between(lat, lon, loc["latitude"], loc["longitude"]) > radius_miles:
+                    continue
+                found.append({
+                    "name": (pl.get("displayName") or {}).get("text"),
+                    "email": None,
+                    "phone": pl.get("nationalPhoneNumber"),
+                    "address": pl.get("formattedAddress"),
+                    "website": pl.get("websiteUri"),
+                    "type": label,
+                })
+            if not data.get("nextPageToken"):
+                break
+            body["pageToken"] = data["nextPageToken"]
+    if errors and not found:
+        raise RuntimeError("Google Places unavailable")
+    return found
+
+
+def is_directory(url):
+    host = urlparse(url).netloc.lower().replace("www.", "")
+    return any(host == d or host.endswith("." + d) for d in DIRECTORY_HOSTS)
+
+
 def find_leads(category, lat, lon, radius_miles, limit):
     """Return up to `limit` real leads that have a verified published email."""
     label = CATEGORIES[category][0]
-    businesses = {}
-    for el in query_overpass(build_query(category, lat, lon, radius_miles)):
-        biz = element_to_business(el, label)
-        if biz["name"] and (biz["email"] or biz["website"]):
-            businesses[(biz["name"].lower(), biz["address"])] = biz
+    businesses, source_errors = {}, []
+
+    def add(biz):
+        if biz["name"] and (biz["email"] or (biz["website"] and not is_directory(biz["website"]))):
+            businesses.setdefault((biz["name"].lower(), biz["address"] or biz["website"] or biz["email"]), biz)
+
+    api_key = os.environ.get("GOOGLE_MAPS_API_KEY")
+    if api_key:
+        try:
+            for biz in query_google_places(category, lat, lon, radius_miles, api_key):
+                add(biz)
+        except RuntimeError as exc:
+            source_errors.append(str(exc))
+    try:
+        for biz in query_nominatim(category, lat, lon, radius_miles):
+            add(biz)
+    except RuntimeError as exc:
+        source_errors.append(str(exc))
+    try:
+        for el in query_overpass(build_query(category, lat, lon, radius_miles)):
+            add(element_to_business(el, label))
+    except RuntimeError as exc:
+        source_errors.append(str(exc))
+    if not businesses and source_errors and len(source_errors) >= (3 if api_key else 2):
+        raise RuntimeError("; ".join(source_errors))
 
     leads, seen_emails, pending = [], set(), []
     for biz in businesses.values():
