@@ -42,6 +42,8 @@ def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'admin_logged_in' not in session:
+            if request.path.startswith('/api/'):
+                return jsonify({'error': 'Login required'}), 401
             return redirect(url_for('admin_login'))
         return f(*args, **kwargs)
     return decorated_function
@@ -50,7 +52,13 @@ def login_required(f):
 
 @app.route('/')
 def index():
-    """Serve the main frontend page"""
+    return redirect(url_for('admin_search_page'))
+
+
+@app.route('/admin/search')
+@login_required
+def admin_search_page():
+    """Lead search form (ZIP, radius, business type)"""
     return render_template('index.html')
 
 # ============= ADMIN ROUTES =============
@@ -82,6 +90,7 @@ def admin_dashboard():
 # ============= API ROUTES - SEARCH =============
 
 @app.route('/api/search', methods=['POST'])
+@login_required
 def search_leads():
     """
     Main search endpoint with advanced filtering
@@ -162,6 +171,7 @@ def apply_price_filter(lead, min_price, max_price):
     return True
 
 @app.route('/api/results/<search_id>', methods=['GET'])
+@login_required
 def get_search_results(search_id):
     """Retrieve previous search results"""
     try:
@@ -173,6 +183,7 @@ def get_search_results(search_id):
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/export/<search_id>', methods=['GET'])
+@login_required
 def export_results(search_id):
     """Export search results as CSV"""
     import csv
@@ -293,6 +304,7 @@ def health_check():
     return jsonify({'status': 'ok', 'database': 'connected'}), 200
 
 @app.route('/api/stats', methods=['GET'])
+@login_required
 def get_public_stats():
     """Public statistics endpoint"""
     try:

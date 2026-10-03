@@ -9,7 +9,7 @@
 <body>
     <div class="topbar"><div class="topbar-inner">
         <a class="brand" href="https://junkjunkiesindiana.com/"><img src="https://junkjunkiesindiana.com/assets/logo-icon.png" alt="" onerror="this.style.display='none'"><span class="brand-name">JUNK<b>JUNKIES</b><small>LEAD TOOL</small></span></a>
-        <div class="header-actions"><a href="/admin/" class="logout-btn">Admin</a></div>
+        <div class="header-actions"><a href="/admin/" class="logout-btn">Dashboard</a><a href="/admin/logout/" class="logout-btn">Log out</a></div>
     </div></div>
     <div class="container">
         <div class="page-title"><h1>Lead Finder</h1><p>Find potential customers for junk removal services</p></div>
@@ -32,7 +32,7 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="radius">Radius (miles)</label>
+                        <label for="radius">Radius (miles, 1-50)</label>
                         <input
                             type="number"
                             id="radius"
@@ -42,6 +42,12 @@
                             value="10"
                             required
                         >
+                        <div class="controls" style="margin:10px 0 0">
+                            <button type="button" class="filter-btn" onclick="setRadius(5)">5 mi</button>
+                            <button type="button" class="filter-btn" onclick="setRadius(10)">10 mi</button>
+                            <button type="button" class="filter-btn" onclick="setRadius(25)">25 mi</button>
+                            <button type="button" class="filter-btn" onclick="setRadius(50)">50 mi</button>
+                        </div>
                     </div>
 
                     <div class="form-group">
@@ -80,10 +86,10 @@
 
             <!-- Info Box -->
             <div class="card">
-                <h2>ℹHow to Use</h2>
+                <h2>How to Use</h2>
                 <div class="note">
-                    <p><strong>Step 1:</strong> Enter your target location (city, state)</p>
-                    <p><strong>Step 2:</strong> Set the search radius in miles</p>
+                    <p><strong>Step 1:</strong> Enter a ZIP code or "City, ST" anywhere in the US</p>
+                    <p><strong>Step 2:</strong> Pick a radius in miles (5 to 50). Bigger radius finds more but takes longer</p>
                     <p><strong>Step 3:</strong> Choose the type of properties to search</p>
                     <p><strong>Step 4:</strong> Click "Search Leads" to find potential customers</p>
                     <p style="margin-top:18px;padding-top:18px;border-top:1px solid var(--line)">
@@ -143,6 +149,8 @@
     </div>
 
     <script>
+        function setRadius(miles) { document.getElementById('radius').value = miles; }
+
         // State management
         let currentSearchId = null;
         let currentSearchData = null;
@@ -211,6 +219,7 @@
                     body: JSON.stringify(payload)
                 });
 
+                if (response.status === 401) { window.location.href = '/admin/login/'; return; }
                 if (!response.ok) {
                     const error = await response.json();
                     throw new Error(error.error || 'Search failed');
