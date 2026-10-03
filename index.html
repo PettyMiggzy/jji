@@ -177,9 +177,11 @@ tailwind.config={theme:{extend:{colors:{ink:'#0B0D10',slate2:'#14181D',line:'#23
         <li class="flex gap-3"><span class="text-ember">✓</span> Backed by the Junk Junkies name in Texas &amp; Florida</li>
       </ul>
     </div>
-    <form id="quoteForm" name="quote" class="lg:col-span-7 rounded-3xl bg-slate2 border border-line p-8 grid sm:grid-cols-2 gap-4 reveal" action="/thanks.html" method="POST" enctype="multipart/form-data" data-netlify="true" netlify-honeypot="bot-field">
-      <input type="hidden" name="form-name" value="quote">
-      <p class="hidden"><label>Don't fill this out: <input name="bot-field"></label></p>
+    <form id="quoteForm" class="lg:col-span-7 rounded-3xl bg-slate2 border border-line p-8 grid sm:grid-cols-2 gap-4 reveal">
+      <input type="hidden" name="access_key" value="YOUR_WEB3FORMS_KEY">
+      <input type="hidden" name="subject" value="New junk removal quote request">
+      <input type="hidden" name="from_name" value="Junk Junkies Indiana website">
+      <input type="checkbox" name="botcheck" class="hidden" style="display:none">
       <input required name="name" placeholder="Full name" class="bg-ink border border-line rounded-xl px-4 py-3 w-full focus:outline-none focus:border-ember">
       <input required name="phone" type="tel" placeholder="Mobile number" class="bg-ink border border-line rounded-xl px-4 py-3 w-full focus:outline-none focus:border-ember">
       <input name="email" type="email" placeholder="Email (optional)" class="bg-ink border border-line rounded-xl px-4 py-3 w-full focus:outline-none focus:border-ember">
@@ -191,12 +193,9 @@ tailwind.config={theme:{extend:{colors:{ink:'#0B0D10',slate2:'#14181D',line:'#23
         <option>When do you need it gone?</option><option>Today</option><option>Tomorrow</option><option>This week</option><option>Just pricing it out</option>
       </select>
       <textarea name="details" rows="3" placeholder="Tell us what you've got (rough list is fine)" class="bg-ink border border-line rounded-xl px-4 py-3 w-full focus:outline-none focus:border-ember sm:col-span-2"></textarea>
-      <label class="sm:col-span-2 flex items-center justify-between gap-4 bg-ink border border-dashed border-line rounded-xl px-4 py-3 cursor-pointer hover:border-ember/60">
-        <span class="text-sm text-bone/70">Add photos for the fastest quote</span>
-        <input name="photos" type="file" accept="image/*" multiple class="text-xs">
-      </label>
-      <button type="submit" class="sm:col-span-2 rounded-full bg-ember hover:bg-emberDark text-ink font-bold px-8 py-4 transition">Send My Quote Request</button>
-      <p class="sm:col-span-2 text-xs text-bone/40 text-center">Or text photos straight to <a class="text-ember" href="sms:+13176252831">(317) 625-2831</a>.</p>
+      <a href="sms:+13176252831?body=Hi%20Junk%20Junkies%2C%20here%20are%20photos%20for%20a%20quote" class="sm:col-span-2 block text-center bg-ink border border-dashed border-line rounded-xl px-4 py-3 text-sm text-bone/70 hover:border-ember/60">📷 Have photos? Text them to <span class="text-ember font-semibold">(317) 625-2831</span> for the fastest quote</a>
+      <button type="submit" id="formBtn" class="sm:col-span-2 rounded-full bg-ember hover:bg-emberDark text-ink font-bold px-8 py-4 transition">Send My Quote Request</button>
+      <p id="formMsg" class="sm:col-span-2 text-sm text-center text-bone/60" role="status"></p>
     </form>
   </div>
 </section>
@@ -244,6 +243,13 @@ document.getElementById('marquee').innerHTML=strip+strip;
 
 const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}}),{threshold:.12});
 document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+document.getElementById('quoteForm').addEventListener('submit',async e=>{
+  e.preventDefault();const f=e.target,b=formBtn,m=formMsg;b.disabled=true;b.textContent='Sending...';
+  try{const r=await fetch('https://api.web3forms.com/submit',{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify(Object.fromEntries(new FormData(f)))});
+    const j=await r.json();if(!j.success)throw 0;f.reset();b.textContent='Sent!';m.textContent="Got it. We'll text you shortly. Need it sooner? Call (317) 625-2831.";m.className+=' text-ember';}
+  catch(_){b.disabled=false;b.textContent='Send My Quote Request';m.textContent='Something went wrong. Please call or text (317) 625-2831.';}
+});
 
 // Edit these to your real Indy pricing
 const tiers={1:{price:'$149',pct:'25%',label:'a couple chairs, a dresser, some boxes'},2:{price:'$249',pct:'50%',label:'a sofa, 2 chairs and a few boxes'},3:{price:'$349',pct:'75%',label:'a bedroom set or one-car garage'},4:{price:'$449',pct:'100%',label:'a packed basement or small apartment'}};
