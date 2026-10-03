@@ -44,15 +44,15 @@
   ],
   "rewrites": [
     {
-      "source": "/admin",
+      "source": "/admin/",
       "destination": "https://jji-lead-tool.onrender.com/admin"
     },
     {
-      "source": "/admin/:path*",
+      "source": "/admin/:path*/",
       "destination": "https://jji-lead-tool.onrender.com/admin/:path*"
     },
     {
-      "source": "/api/:path*",
+      "source": "/api/:path*/",
       "destination": "https://jji-lead-tool.onrender.com/api/:path*"
     }
   ]
