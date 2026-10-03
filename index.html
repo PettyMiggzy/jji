@@ -26,8 +26,12 @@ tailwind.config={theme:{extend:{colors:{ink:'#0B0D10',slate2:'#14181D',line:'#23
   .marquee{animation:marquee 28s linear infinite;}
   @keyframes marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
   .logo-pulse{animation:pulse 3s ease-in-out infinite}@keyframes pulse{0%,100%{filter:drop-shadow(0 0 0 rgba(255,90,31,0))}50%{filter:drop-shadow(0 0 8px rgba(255,90,31,.8))}}
+  .logo-shine{position:relative;display:inline-block;animation:floaty 5s ease-in-out infinite;filter:drop-shadow(0 0 28px rgba(255,90,31,.35))}
+  .logo-shine::after{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.75) 50%,transparent 65%);background-size:250% 100%;background-position:150% 0;animation:sheen 4s ease-in-out infinite;-webkit-mask:url(assets/logo-badge.png) center/contain no-repeat;mask:url(assets/logo-badge.png) center/contain no-repeat;pointer-events:none}
+  @keyframes sheen{0%,55%{background-position:150% 0}100%{background-position:-50% 0}}
+  @keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
   .glow{box-shadow:0 0 60px -10px rgba(255,90,31,.55);}
-  @media (prefers-reduced-motion:reduce){.marquee,.logo-pulse{animation:none}.reveal{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){.marquee,.logo-pulse,.logo-shine,.logo-shine::after{animation:none}.reveal{opacity:1;transform:none}}
 </style>
 </head>
 <body class="antialiased">
@@ -35,7 +39,7 @@ tailwind.config={theme:{extend:{colors:{ink:'#0B0D10',slate2:'#14181D',line:'#23
 <header class="fixed top-0 inset-x-0 z-50 backdrop-blur-md bg-ink/70 border-b border-line">
   <div class="max-w-7xl mx-auto px-5 h-16 flex items-center justify-between">
     <a href="#top" class="flex items-center gap-2.5">
-      <img src="assets/logo-icon.png" alt="Junk Junkies Indiana raccoon logo" class="h-10 w-10 rounded-lg logo-pulse">
+      <img src="assets/logo-icon.png" alt="Junk Junkies Indiana logo" class="h-10 w-10 rounded-lg logo-pulse">
       <span class="display text-lg font-extrabold">JUNK<span class="text-ember">JUNKIES</span> <span class="text-bone/50 font-semibold text-xs ml-1">INDIANA</span></span>
     </a>
     <nav class="hidden md:flex items-center gap-8 text-sm text-bone/70">
@@ -68,7 +72,7 @@ tailwind.config={theme:{extend:{colors:{ink:'#0B0D10',slate2:'#14181D',line:'#23
       </div>
     </div>
     <div class="lg:col-span-5 hidden lg:flex flex-col items-center gap-6">
-      <img src="assets/logo-badge.png" alt="Junk Junkies Indiana" class="w-72 drop-shadow-[0_0_40px_rgba(255,90,31,.35)]">
+      <div class="logo-shine hero-logo"><img src="assets/logo-badge.png" alt="Junk Junkies Indiana junk removal logo" class="w-80"></div>
       <div class="bg-slate2/80 backdrop-blur border border-line rounded-3xl p-8 grid grid-cols-3 gap-6 text-center">
         <div><div class="display text-3xl font-extrabold text-ember">Same-day</div><div class="text-xs text-bone/60 mt-1">When schedule allows</div></div>
         <div><div class="display text-3xl font-extrabold text-ember">Upfront</div><div class="text-xs text-bone/60 mt-1">Price before we start</div></div>
@@ -218,7 +222,7 @@ tailwind.config={theme:{extend:{colors:{ink:'#0B0D10',slate2:'#14181D',line:'#23
 <footer class="border-t border-line py-16 pb-32 md:pb-16">
   <div class="max-w-7xl mx-auto px-5 grid md:grid-cols-4 gap-10 text-sm">
     <div class="md:col-span-2">
-      <div class="flex items-center gap-3 mb-4"><img src="assets/logo-badge.png" alt="Junk Junkies Indiana logo" class="h-32 w-32 rounded-xl" loading="lazy"><div class="display text-2xl font-extrabold">JUNK<span class="text-ember">JUNKIES</span> <span class="text-bone/50 text-sm font-semibold">INDIANA</span></div></div>
+      <div class="flex items-center gap-3 mb-4"><img src="assets/logo-badge.png" alt="Junk Junkies Indiana logo" class="h-36 w-36" loading="lazy"><div class="display text-2xl font-extrabold">JUNK<span class="text-ember">JUNKIES</span> <span class="text-bone/50 text-sm font-semibold">INDIANA</span></div></div>
       <p class="text-bone/50 max-w-sm">Junk removal for Indianapolis and surrounding cities. Part of the Junk Junkies family: Texas (HQ), Florida and Indiana.</p>
     </div>
     <div><div class="font-semibold mb-3">Contact</div><a href="tel:+13176252831" class="block text-bone/60 hover:text-ember">(317) 625-2831</a><a href="sms:+13176252831" class="block text-bone/60 hover:text-ember">Text us photos</a><a href="mailto:quote@junkjunkiesindiana.com" class="block text-bone/60 hover:text-ember">quote@junkjunkiesindiana.com</a></div>
