@@ -52,7 +52,7 @@
       </div>
     </div>
     <div class="lg:col-span-5 hidden lg:flex flex-col items-center gap-6">
-      <div class="logo-shine hero-logo"><img src="/assets/logo-badge.png" alt="Junk Junkies Indiana junk removal logo" width="320" height="320" class="w-80"></div>
+      <div class="hero-logo relative"><div aria-hidden="true" class="absolute inset-6 rounded-full" style="background:radial-gradient(circle,rgba(20,245,0,.28),transparent 68%);filter:blur(30px)"></div><video id="heroBird" autoplay muted loop playsinline preload="auto" poster="/assets/logo-poster.webp" width="320" height="320" class="w-80 h-80" style="position:relative;mix-blend-mode:screen" aria-label="Junk Junkies Indiana logo with animated cardinal mascot" role="img"><source src="/assets/bird-loop.webm" type="video/webm"><source src="/assets/bird-loop.mp4" type="video/mp4"></video></div>
       <div class="bg-slate2/80 backdrop-blur border border-line rounded-3xl p-8 grid grid-cols-3 gap-6 text-center">
         <div><div class="display text-3xl font-extrabold text-ember">Same-day</div><div class="text-xs text-bone/60 mt-1">When schedule allows</div></div>
         <div><div class="display text-3xl font-extrabold text-ember">Upfront</div><div class="text-xs text-bone/60 mt-1">Price before we start</div></div>
@@ -208,6 +208,7 @@
 </div><div class="max-w-7xl mx-auto px-5 mt-12 text-xs text-bone/40">© 2026 Junk Junkies Indiana. All rights reserved.</div></footer>
 <div class="md:hidden fixed bottom-0 inset-x-0 z-50 bg-ink/95 backdrop-blur border-t border-line grid grid-cols-3 text-center text-sm font-bold"><a href="tel:+13176378807" class="py-4 border-r border-line">Call</a><a href="sms:+13176378807?body=Hi%20Junk%20Junkies%2C%20I%20need%20a%20quote%20for%3A" class="py-4 border-r border-line">Text</a><a href="#quote" class="py-4 bg-ember text-ink">Quote</a></div>
 <script src="/assets/form.js" defer></script><script>
+if(matchMedia('(prefers-reduced-motion: reduce)').matches){const v=document.getElementById('heroBird');if(v){v.removeAttribute('autoplay');v.pause()}}
 const slugify=n=>n.toLowerCase().replace(/ /g,'-');
 
 const cities=[["Indianapolis","Downtown, Broad Ripple, Fountain Square, Irvington"],["Carmel","Hamilton County"],["Fishers","Hamilton County"],["Noblesville","Hamilton County"],["Westfield","Hamilton County"],["Zionsville","Boone County"],["Greenwood","Johnson County"],["Franklin","Johnson County"],["Avon","Hendricks County"],["Plainfield","Hendricks County"],["Brownsburg","Hendricks County"],["Lawrence","Marion County"],["Speedway","Marion County"],["Beech Grove","Marion County"],["Greenfield","Hancock County"],["Mooresville","Morgan County"]];
