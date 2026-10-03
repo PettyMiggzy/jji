@@ -3,26 +3,93 @@ Junk Junkies - Lead Generation Tool
 Main Flask application for collecting potential customer emails based on location and radius
 """
 
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, session, redirect, url_for
 from flask_cors import CORS
 from scraper import LeadScraper
-from database import init_db, save_results, get_results
+from database import init_db, save_results, get_results, list_all_searches, delete_search
 from geocoding import get_coordinates, calculate_distance
 import os
 from dotenv import load_dotenv
+from functools import wraps
 
 load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
+app.secret_key = 'junk_junkies_secret_key_bankz_2024'  # For session management
 
 # Initialize database
 init_db()
+
+# Admin password
+ADMIN_PASSWORD = 'Bankz'
+
+def login_required(f):
+    """Decorator to check if admin is logged in"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'admin_logged_in' not in session:
+            return redirect(url_for('admin_login'))
+        return f(*args, **kwargs)
+    return decorated_function
 
 @app.route('/')
 def index():
     """Serve the main frontend page"""
     return render_template('index.html')
+
+@app.route('/admin/login', methods=['GET', 'POST'])
+def admin_login():
+    """Admin login page"""
+    if request.method == 'POST':
+        password = request.form.get('password')
+        if password == ADMIN_PASSWORD:
+            session['admin_logged_in'] = True
+            return redirect(url_for('admin_dashboard'))
+        else:
+            return render_template('admin_login.html', error='Invalid password')
+    return render_template('admin_login.html')
+
+@app.route('/admin/logout')
+def admin_logout():
+    """Admin logout"""
+    session.pop('admin_logged_in', None)
+    return redirect(url_for('admin_login'))
+
+@app.route('/admin')
+@login_required
+def admin_dashboard():
+    """Admin dashboard page"""
+    return render_template('admin.html')
+
+@app.route('/api/admin/stats', methods=['GET'])
+@login_required
+def get_admin_stats():
+    """Get admin statistics"""
+    try:
+        searches = list_all_searches()
+        total_leads = sum(s.get('lead_count', 0) for s in searches)
+
+        stats = {
+            'total_searches': len(searches),
+            'total_leads': total_leads,
+            'searches': searches
+        }
+        return jsonify(stats), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/admin/search/<search_id>', methods=['DELETE'])
+@login_required
+def admin_delete_search(search_id):
+    """Delete a search"""
+    try:
+        if delete_search(search_id):
+            return jsonify({'success': True, 'message': 'Search deleted'}), 200
+        else:
+            return jsonify({'error': 'Search not found'}), 404
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/search', methods=['POST'])
 def search_leads():
