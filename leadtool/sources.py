@@ -237,7 +237,7 @@ def query_google_places(category, lat, lon, radius_miles, api_key):
     found, errors = [], 0
     for term in GOOGLE_TERMS[category]:
         body = {"textQuery": term, "pageSize": 20,
-                "locationRestriction": {"circle": {"center": {"latitude": lat, "longitude": lon}, "radius": radius_m}}}
+                "locationBias": {"circle": {"center": {"latitude": lat, "longitude": lon}, "radius": radius_m}}}
         for _ in range(3):
             try:
                 resp = requests.post(GOOGLE_URL, json=body, headers=headers, timeout=15)
