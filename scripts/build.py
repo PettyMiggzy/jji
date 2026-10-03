@@ -5,9 +5,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 BASE = "https://junkjunkiesindiana.com"
-STREET, ZIP = "6516 Tamp Lane", "46241"
+STREET, ZIP = "6516 Tampa Lane", "46241"
 ADDR_LINE = f"{STREET}, Indianapolis, IN {ZIP}"
-MAP_SRC = "https://www.google.com/maps?q=6516+Tamp+Lane,+Indianapolis,+IN+46241&output=embed"
+MAP_SRC = "https://www.google.com/maps?q=6516+Tampa+Lane,+Indianapolis,+IN+46241&output=embed"
 PHONE_DISPLAY, PHONE_TEL = "(317) 637-8807", "+13176378807"
 KEY = "fad0a06a-8881-4103-a497-16555dd0f082"
 TODAY = datetime.date.today().isoformat()
