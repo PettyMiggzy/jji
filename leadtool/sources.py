@@ -257,7 +257,7 @@ def query_overture(category, lat, lon, radius_miles):
     path = f"s3://overturemaps-us-west-2/release/{overture_release()}/theme=places/type=place/*"
     sql = f"""
         SELECT names.primary, websites[1], emails[1], phones[1], addresses[1].freeform,
-               addresses[1].locality, addresses[1].region, bbox.xmin, bbox.ymin
+               addresses[1].locality, addresses[1].region, bbox.xmin, bbox.ymin, taxonomy.primary
         FROM read_parquet('{path}', hive_partitioning=1)
         WHERE bbox.xmin BETWEEN {lon - dlon} AND {lon + dlon} AND bbox.ymin BETWEEN {lat - dlat} AND {lat + dlat}
           AND taxonomy.primary IN ({cats})
@@ -273,15 +273,16 @@ def query_overture(category, lat, lon, radius_miles):
         raise RuntimeError(f"Overture Maps error: {str(exc)[:160]}") from exc
     label = CATEGORIES[category][0]
     found = []
-    for name, web, email, phone, freeform, city, region, x, y in rows:
+    rank = {c: i for i, c in enumerate(OVERTURE_CATS[category])}  # list order = lead priority
+    for name, web, email, phone, freeform, city, region, x, y, cat in rows:
         dist = miles_between(lat, lon, y, x)
         if not name or dist > radius:
             continue
-        found.append((dist, {
+        found.append(((rank.get(cat, 99), dist), {
             "name": name, "email": email, "phone": phone, "website": web, "type": label, "source": "Overture Maps",
             "address": ", ".join(p for p in (freeform, city, region) if p) or None,
         }))
-    found.sort(key=lambda t: (t[1]["email"] is None, t[0]))  # published email first, then nearest
+    found.sort(key=lambda t: (t[0][0], t[1]["email"] is None, t[0][1]))  # best business type, listed email, nearest
     return [biz for _, biz in found[:500]]
 
 
