@@ -5,7 +5,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 BASE = "https://junkjunkiesindiana.com"
-PHONE_DISPLAY, PHONE_TEL = "(317) 625-2831", "+13176252831"
+PHONE_DISPLAY, PHONE_TEL = "(317) 637-8807", "+13176378807"
 KEY = "fad0a06a-8881-4103-a497-16555dd0f082"
 TODAY = datetime.date.today().isoformat()
 OG = f"{BASE}/assets/og-image.jpg"
@@ -102,7 +102,7 @@ SERVICES = [
   items=["Old furniture, couches and mattresses", "Water-damaged contents after flooding", "Boxes, bins and decades of storage", "Workbenches, shelving and exercise equipment", "Old appliances: washers, dryers, freezers", "Paneling, carpet and light demolition debris"],
   faq=[("Do you carry items up basement stairs?", "Yes. Our crew carries everything out of the basement, up the stairs and to the truck. You do not have to move anything beforehand."),
        ("Can you clean out a flooded or damp basement?", "We remove water-damaged furniture and contents. We do not handle mold remediation, but we can clear the space so a remediation company can work."),
-       ("How much does a basement cleanout cost?", "Price depends on how much space your items fill in our truck. Text a photo to (317) 625-2831 for a free quote before we start.")]),
+       ("How much does a basement cleanout cost?", "Price depends on how much space your items fill in our truck. Text a photo to (317) 637-8807 for a free quote before we start.")]),
  dict(slug="estate-cleanout-indianapolis", name="Estate Cleanout", h1="Estate & Hoarding Cleanout in Indianapolis",
   kw="estate cleanout Indianapolis", icon="02",
   blurb="Respectful, thorough cleanouts for families, attorneys and realtors on tight timelines.",
@@ -110,7 +110,7 @@ SERVICES = [
   items=["Whole-house cleanouts, attic to basement", "Hoarding and heavy-clutter cleanouts", "Furniture, clothing and household goods", "Garage, shed and outbuilding contents", "Pre-listing cleanouts for realtors", "Cleanouts coordinated with family or attorneys"],
   faq=[("Can you work around items we want to keep?", "Yes. Walk the home with our crew first and mark what stays. We clear the rest."),
        ("Do you donate usable items?", "Usable furniture and household goods go to donation partners where possible, and recyclables are separated from true trash."),
-       ("Can you work on a closing deadline?", "We schedule around closing dates and can often start within a day or two. Call (317) 625-2831 with your timeline.")]),
+       ("Can you work on a closing deadline?", "We schedule around closing dates and can often start within a day or two. Call (317) 637-8807 with your timeline.")]),
  dict(slug="furniture-removal-indianapolis", name="Furniture Removal", h1="Furniture Removal in Indianapolis",
   kw="furniture removal Indianapolis", icon="03",
   blurb="Couches, mattresses, dressers, tables and more, picked up and hauled away.",
@@ -156,7 +156,7 @@ SERVICES = [
   blurb="Apartment turns, eviction cleanouts, office cleanouts and construction debris for repeat clients.",
   intro="Landlords, property managers and small businesses need junk gone quickly and reliably. We handle apartment turnovers, eviction cleanouts, office cleanouts and construction debris across the Indianapolis metro.",
   items=["Apartment and rental turnovers", "Eviction cleanouts", "Office and retail cleanouts", "Construction and renovation debris", "Pre-listing cleanouts for realtors", "Recurring pickups for repeat clients"],
-  faq=[("Do you offer pricing for repeat clients?", "Yes. Call (317) 625-2831 to set up repeat-client pricing."),
+  faq=[("Do you offer pricing for repeat clients?", "Yes. Call (317) 637-8807 to set up repeat-client pricing."),
        ("Can you turn a unit quickly?", "We prioritize fast turnarounds. Call us with your timeline."),
        ("Do you work with realtors?", "Yes. Pre-listing cleanouts are a regular part of our work.")]),
 ]

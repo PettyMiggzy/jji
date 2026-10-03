@@ -6,7 +6,7 @@ P=("Professional esports-style junk removal company badge logo, same style as a 
  "snarling angry raccoon mascot head with sharp teeth in front of an outline of the state of Indiana with a white star at Indianapolis, "
  "a bold angled banner across the bottom reading exactly 'JUNK JUNKIES' in huge white blocky condensed letters with black outline, "
  "below it the word 'INDIANA' in bright orange (#FF5A1F), then 'JUNK REMOVAL' in white, then a thin line 'RESIDENTIAL & COMMERCIAL', "
- "and the phone number '317-625-2831' in white at the bottom, hexagonal orange border frame, "
+ "and the phone number '317-637-8807' in white at the bottom, hexagonal orange border frame, "
  "color palette strictly orange, white, black, solid black background, centered, symmetrical, crisp vector look, "
  "all text spelled perfectly and legible")
 models={"ideogram":"ideogram-v4-5","gpt":"gpt-image-2","flux3":"flux-3-image"}
