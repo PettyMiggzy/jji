@@ -5,6 +5,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 BASE = "https://junkjunkiesindiana.com"
+STREET, ZIP = "6516 Tamp Lane", "46241"
+ADDR_LINE = f"{STREET}, Indianapolis, IN {ZIP}"
+MAP_SRC = "https://www.google.com/maps?q=6516+Tamp+Lane,+Indianapolis,+IN+46241&output=embed"
 PHONE_DISPLAY, PHONE_TEL = "(317) 637-8807", "+13176378807"
 KEY = "fad0a06a-8881-4103-a497-16555dd0f082"
 TODAY = datetime.date.today().isoformat()
@@ -177,7 +180,7 @@ def business_schema():
         "image": OG, "logo": f"{BASE}/assets/logo-badge.png", "telephone": PHONE_TEL,
         "email": "info@junkjunkiesindiana.com", "priceRange": "$$",
         "description": "Junk removal, cleanouts and light demolition serving Indianapolis and surrounding Indiana cities.",
-        "address": {"@type": "PostalAddress", "addressLocality": "Indianapolis", "addressRegion": "IN", "addressCountry": "US"},
+        "address": {"@type": "PostalAddress", "streetAddress": STREET, "addressLocality": "Indianapolis", "addressRegion": "IN", "postalCode": ZIP, "addressCountry": "US"},
         "geo": {"@type": "GeoCoordinates", "latitude": 39.7684, "longitude": -86.1581},
         "areaServed": [{"@type": "City", "name": c["name"] + ", IN"} for c in CITIES],
         "sameAs": ["https://junkjunkiesflorida.com", "https://junkjunkiestexas.com"],
@@ -233,7 +236,7 @@ def footer():
 <div><img src="/assets/logo-badge.png" width="144" height="144" alt="Junk Junkies Indiana junk removal logo" class="h-36 w-36 mb-4" loading="lazy"><p class="text-bone/50">Junk removal for Indianapolis and surrounding cities. Part of the Junk Junkies family: Texas (HQ), Florida and Indiana.</p></div>
 <div><div class="font-semibold mb-3">Services</div>{svcs}</div>
 <div><div class="font-semibold mb-3">Service Area</div>{cities}</div>
-<div><div class="font-semibold mb-3">Contact</div><a href="tel:{PHONE_TEL}" class="block text-bone/60 hover:text-ember">{PHONE_DISPLAY}</a><a href="sms:{PHONE_TEL}" class="block text-bone/60 hover:text-ember">Text us photos</a><a href="mailto:quote@junkjunkiesindiana.com" class="block text-bone/60 hover:text-ember">quote@junkjunkiesindiana.com</a>
+<div><div class="font-semibold mb-3">Contact</div><a href="tel:{PHONE_TEL}" class="block text-bone/60 hover:text-ember">{PHONE_DISPLAY}</a><a href="sms:{PHONE_TEL}" class="block text-bone/60 hover:text-ember">Text us photos</a><a href="mailto:quote@junkjunkiesindiana.com" class="block text-bone/60 hover:text-ember">quote@junkjunkiesindiana.com</a><address class="not-italic text-bone/60 mt-2">{STREET}<br>Indianapolis, IN {ZIP}</address>
 <div class="mt-6 font-semibold mb-3">Sister sites</div><a rel="noopener" href="https://junkjunkiestexas.com" class="block text-bone/60 hover:text-ember">Junk Junkies Texas</a><a rel="noopener" href="https://junkjunkiesflorida.com" class="block text-bone/60 hover:text-ember">Junk Junkies Florida</a></div>
 </div><div class="max-w-7xl mx-auto px-5 mt-12 text-xs text-bone/40">© {datetime.date.today().year} Junk Junkies Indiana. All rights reserved.</div></footer>
 <div class="md:hidden fixed bottom-0 inset-x-0 z-50 bg-ink/95 backdrop-blur border-t border-line grid grid-cols-3 text-center text-sm font-bold"><a href="tel:{PHONE_TEL}" class="py-4 border-r border-line">Call</a><a href="sms:{PHONE_TEL}?body=Hi%20Junk%20Junkies%2C%20I%20need%20a%20quote%20for%3A" class="py-4 border-r border-line">Text</a><a href="#quote" class="py-4 bg-ember text-ink">Quote</a></div>
