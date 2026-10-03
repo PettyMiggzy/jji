@@ -1,0 +1,1 @@
+module.exports={content:["../*.html","../**/*.html","!../tools/**"],theme:{extend:{colors:{ink:'#0B0D10',slate2:'#14181D',line:'#232A32',bone:'#F4F1EA',ember:'#FF5A1F',emberDark:'#D9440F'},fontFamily:{display:['Sora','system-ui','sans-serif'],body:['Inter','system-ui','sans-serif']}}},plugins:[]}

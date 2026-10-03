@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /scripts/
+Disallow: /tools/
+
+Sitemap: https://junkjunkiesindiana.com/sitemap.xml
