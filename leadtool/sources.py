@@ -6,7 +6,7 @@ No emails are guessed or generated; every returned email was found in a tag or a
 
 import re
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError as FuturesTimeout
 from urllib.parse import urljoin, urlparse
 from urllib.robotparser import RobotFileParser
 
@@ -22,22 +22,28 @@ OVERPASS_MIRRORS = [
 USER_AGENT = "JunkJunkiesLeadTool/1.0 (school project; contact via repo PettyMiggzy/jji)"
 METERS_PER_MILE = 1609.34
 MAX_RADIUS_MILES = 50
-SITE_TIME_BUDGET = 45
+OVERPASS_BUDGET = 50
+SITE_TIME_BUDGET = 25
+MAX_PAGE_BYTES = 1_500_000
 CONTACT_PATHS = ["", "/contact", "/contact-us"]
 
 # type -> (label, Overpass tag filters). Every filter also requires a name.
+CONTACT_KEYS = ["website", "email", "contact:website", "contact:email"]
+
+# type -> (label, tag filters). Each filter is paired with each contact key so Overpass
+# only returns businesses that publish a website or email, which keeps queries fast.
 CATEGORIES = {
     "apartments": (
         "Apartment Complex",
-        ['["building"="apartments"]', '["residential"="apartments"]', '["name"~"apartments?$",i]["landuse"="residential"]'],
+        ['["building"="apartments"]', '["residential"="apartments"]'],
     ),
     "trailers": (
         "Trailer / Mobile Home Park",
-        ['["residential"~"^(trailer_park|mobile_home_park)$"]', '["tourism"="caravan_site"]', '["name"~"mobile home|trailer park",i]'],
+        ['["residential"~"^(trailer_park|mobile_home_park)$"]', '["tourism"="caravan_site"]'],
     ),
     "housing_companies": (
         "Property Management / Real Estate",
-        ['["office"~"^(property_management|estate_agent)$"]', '["shop"="estate_agent"]'],
+        ['["office"="property_management"]', '["office"="estate_agent"]', '["shop"="estate_agent"]'],
     ),
 }
 
@@ -61,22 +67,27 @@ def check_email(address):
 def build_query(category, lat, lon, radius_miles):
     meters = int(min(radius_miles, MAX_RADIUS_MILES) * METERS_PER_MILE)
     statements = "".join(
-        f'nwr{flt}["name"](around:{meters},{lat},{lon});' for flt in CATEGORIES[category][1]
+        f'nwr{flt}["name"]["{key}"](around:{meters},{lat},{lon});'
+        for flt in CATEGORIES[category][1]
+        for key in CONTACT_KEYS
     )
-    return f"[out:json][timeout:50];({statements});out center tags 400;"
+    return f"[out:json][timeout:25];({statements});out center tags 250;"
 
 
 def query_overpass(query):
+    deadline = time.time() + OVERPASS_BUDGET
     last_error = None
     for url in OVERPASS_MIRRORS:
+        remaining = deadline - time.time()
+        if remaining < 5:
+            break
         try:
-            resp = requests.post(url, data={"data": query}, headers={"User-Agent": USER_AGENT}, timeout=60)
+            resp = requests.post(url, data={"data": query}, headers={"User-Agent": USER_AGENT}, timeout=min(30, remaining))
             if resp.status_code == 200:
                 return resp.json().get("elements", [])
             last_error = f"{url} returned {resp.status_code}"
         except (requests.RequestException, ValueError) as exc:
-            last_error = f"{url}: {exc}"
-        time.sleep(1)
+            last_error = f"{url}: {type(exc).__name__}"
     raise RuntimeError(f"All Overpass mirrors failed ({last_error})")
 
 
@@ -141,7 +152,7 @@ def email_from_website(website):
             continue
         if resp.status_code != 200 or "text/html" not in resp.headers.get("Content-Type", ""):
             continue
-        for candidate in extract_emails(resp.text, host)[:5]:
+        for candidate in extract_emails(resp.text[:MAX_PAGE_BYTES], host)[:5]:
             good = check_email(candidate)
             if good:
                 return good
@@ -167,13 +178,11 @@ def find_leads(category, lat, lon, radius_miles, limit):
         elif biz["website"]:
             pending.append(biz)
 
-    deadline = time.time() + SITE_TIME_BUDGET
-    with ThreadPoolExecutor(max_workers=8) as pool:
-        futures = {pool.submit(email_from_website, biz["website"]): biz for biz in pending[:80]}
-        for fut in as_completed(futures, timeout=None):
-            if time.time() > deadline or len(leads) >= limit:
-                for f in futures:
-                    f.cancel()
+    pool = ThreadPoolExecutor(max_workers=6)
+    futures = {pool.submit(email_from_website, biz["website"]): biz for biz in pending[:60]}
+    try:
+        for fut in as_completed(futures, timeout=SITE_TIME_BUDGET):
+            if len(leads) >= limit:
                 break
             biz = futures[fut]
             try:
@@ -184,6 +193,10 @@ def find_leads(category, lat, lon, radius_miles, limit):
                 seen_emails.add(email.lower())
                 biz["email"], biz["email_source"] = email, "Business website"
                 leads.append(biz)
+    except FuturesTimeout:
+        pass
+    finally:
+        pool.shutdown(wait=False, cancel_futures=True)
 
     return [
         {
