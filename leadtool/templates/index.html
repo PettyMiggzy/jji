@@ -21,12 +21,12 @@
 
                 <form id="searchForm">
                     <div class="form-group">
-                        <label for="location">Location</label>
+                        <label for="location">ZIP code <span style="opacity:.6;font-weight:400">(or city, state)</span></label>
                         <input
                             type="text"
                             id="location"
                             name="location"
-                            placeholder="e.g., Indianapolis, IN"
+                            placeholder="e.g., 46241 or Tampa, FL" autocomplete="postal-code"
                             required
                         >
                     </div>
@@ -184,7 +184,7 @@
 
             // Validation
             if (!location) {
-                showError('Please enter a location');
+                showError('Enter a ZIP code or city to search around.');
                 return;
             }
 

@@ -4,36 +4,37 @@ Geocoding module for converting locations to coordinates and calculating distanc
 
 from geopy.geocoders import Nominatim
 from geopy.distance import geodesic
+import re
 import time
 
 # Initialize geocoder (using free Nominatim service)
 geocoder = Nominatim(user_agent="junk_junkies_lead_scraper")
 
+ZIP_RE = re.compile(r"^\s*(\d{5})(?:-\d{4})?\s*$")
+
+
 def get_coordinates(location):
     """
-    Convert a location string to latitude and longitude
-
-    Args:
-        location: Location string (e.g., "Indianapolis, IN")
-
-    Returns:
-        Tuple of (latitude, longitude) or (None, None) if not found
+    Convert a US ZIP code ("46241") or place ("Haines City, FL") to (latitude, longitude).
+    Searches are restricted to the US; returns (None, None) when nothing matches.
     """
     try:
-        print(f"[*] Geocoding location: {location}")
-
-        # Geocode the location
-        geolocated = geocoder.geocode(location, timeout=10)
-
-        if geolocated:
-            print(f"[+] Found coordinates: {geolocated.latitude}, {geolocated.longitude}")
-            return geolocated.latitude, geolocated.longitude
+        zip_match = ZIP_RE.match(location or "")
+        if zip_match:
+            zip5 = zip_match.group(1)
+            result = geocoder.geocode({"postalcode": zip5, "country": "US"}, addressdetails=True, timeout=10)
+            if result and str(result.raw.get("address", {}).get("postcode", ""))[:5] != zip5:
+                print(f"[!] ZIP {zip5} resolved to a different postcode; treating as not found")
+                result = None
         else:
-            print(f"[!] Could not geocode location: {location}")
-            return None, None
-
+            result = geocoder.geocode(location, country_codes="us", timeout=10)
+        if result:
+            print(f"[+] Geocoded {location!r} -> {result.latitude}, {result.longitude}")
+            return result.latitude, result.longitude
+        print(f"[!] Could not geocode {location!r}")
+        return None, None
     except Exception as e:
-        print(f"[!] Error geocoding: {str(e)}")
+        print(f"[!] Error geocoding: {e}")
         return None, None
 
 def calculate_distance(lat1, lon1, lat2, lon2):

@@ -111,7 +111,7 @@ def search_leads():
         # Geocode location
         lat, lon = get_coordinates(location)
         if not lat:
-            return jsonify({'error': 'Could not geocode location'}), 400
+            return jsonify({'error': 'We could not find that ZIP code or place. Try a 5-digit US ZIP or "City, ST".'}), 400
 
         print(f"[*] Searching for {property_type} near {location} ({lat}, {lon}) within {radius} miles")
 

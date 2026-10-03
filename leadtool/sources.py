@@ -26,7 +26,7 @@ MAX_RADIUS_MILES = 50
 OVERPASS_BUDGET = 20
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
 DIRECTORY_HOSTS = ("facebook.com","yelp.com","yellowpages.com","mapquest.com","bbb.org","linkedin.com","zillow.com","apartments.com","directionus.com","instagram.com","x.com","twitter.com","google.com","manta.com","chamberofcommerce.com","trulia.com","realtor.com","rent.com","apartmentlist.com")
-SITE_TIME_BUDGET = 25
+SITE_TIME_BUDGET = 30
 MAX_PAGE_BYTES = 1_500_000
 CONTACT_PATHS = ["", "/contact", "/contact-us"]
 
@@ -120,6 +120,7 @@ def element_to_business(el, label):
         "address": " ".join(p for p in parts if p) or None,
         "website": website,
         "type": label,
+        "source": "OpenStreetMap",
     }
 
 
@@ -217,6 +218,73 @@ def query_nominatim(category, lat, lon, radius_miles):
     return found
 
 
+OVERTURE_CATS = {
+    "apartments": ["apartment"],
+    "trailers": ["mobile_home_park"],
+    "housing_companies": ["property_management", "real_estate_agent", "commercial_real_estate",
+                          "real_estate_investment", "housing_authority"],
+}
+OVERTURE_DEFAULT_RELEASE = "2026-09-23.1"
+_overture_release = None
+
+
+def overture_release():
+    """Latest Overture release folder (they retire old ones), cached per process."""
+    global _overture_release
+    if _overture_release:
+        return _overture_release
+    try:
+        resp = requests.get("https://overturemaps-us-west-2.s3.amazonaws.com/",
+                            params={"list-type": "2", "prefix": "release/", "delimiter": "/"}, timeout=10)
+        found = sorted(re.findall(r"<Prefix>release/([0-9][^/<]*)/</Prefix>", resp.text))
+        _overture_release = found[-1] if found else OVERTURE_DEFAULT_RELEASE
+    except requests.RequestException:
+        _overture_release = OVERTURE_DEFAULT_RELEASE
+    return _overture_release
+
+
+def query_overture(category, lat, lon, radius_miles):
+    """Free Overture Maps places (public S3 parquet), searched by bounding box then exact radius."""
+    try:
+        import duckdb
+    except ImportError as exc:
+        raise RuntimeError("Overture source unavailable (duckdb not installed)") from exc
+    from math import cos, radians
+    radius = min(radius_miles, MAX_RADIUS_MILES)
+    dlat = radius / 69.0
+    dlon = radius / (69.0 * max(cos(radians(lat)), 0.1))
+    cats = ",".join("'%s'" % c for c in OVERTURE_CATS[category])
+    path = f"s3://overturemaps-us-west-2/release/{overture_release()}/theme=places/type=place/*"
+    sql = f"""
+        SELECT names.primary, websites[1], emails[1], phones[1], addresses[1].freeform,
+               addresses[1].locality, addresses[1].region, bbox.xmin, bbox.ymin
+        FROM read_parquet('{path}', hive_partitioning=1)
+        WHERE bbox.xmin BETWEEN {lon - dlon} AND {lon + dlon} AND bbox.ymin BETWEEN {lat - dlat} AND {lat + dlat}
+          AND taxonomy.primary IN ({cats})
+          AND COALESCE(operating_status, 'open') NOT ILIKE '%closed%'
+    """
+    try:
+        con = duckdb.connect()
+        con.execute("SET memory_limit='300MB'; SET threads=2; SET home_directory='/tmp'; SET extension_directory='/tmp/duckdb_ext';")
+        con.execute("INSTALL httpfs; LOAD httpfs; SET s3_region='us-west-2';"
+                    " SET s3_access_key_id=''; SET s3_secret_access_key=''; SET s3_session_token='';")
+        rows = con.execute(sql).fetchall()
+    except Exception as exc:  # duckdb raises many exception types for network/schema problems
+        raise RuntimeError(f"Overture Maps error: {str(exc)[:160]}") from exc
+    label = CATEGORIES[category][0]
+    found = []
+    for name, web, email, phone, freeform, city, region, x, y in rows:
+        dist = miles_between(lat, lon, y, x)
+        if not name or dist > radius:
+            continue
+        found.append((dist, {
+            "name": name, "email": email, "phone": phone, "website": web, "type": label, "source": "Overture Maps",
+            "address": ", ".join(p for p in (freeform, city, region) if p) or None,
+        }))
+    found.sort(key=lambda t: (t[1]["email"] is None, t[0]))  # published email first, then nearest
+    return [biz for _, biz in found[:500]]
+
+
 GOOGLE_TERMS = {
     "apartments": ["apartment complex", "apartment community"],
     "trailers": ["mobile home park", "trailer park"],
@@ -262,6 +330,7 @@ def query_google_places(category, lat, lon, radius_miles, api_key):
                     "address": pl.get("formattedAddress"),
                     "website": pl.get("websiteUri"),
                     "type": label,
+                    "source": "Google Places",
                 })
             if not data.get("nextPageToken"):
                 break
@@ -296,30 +365,40 @@ def find_leads(category, lat, lon, radius_miles, limit, warnings=None):
                 warnings.append(str(exc))
             print(f"[!] {exc}")
     try:
-        for biz in query_nominatim(category, lat, lon, radius_miles):
+        for biz in query_overture(category, lat, lon, radius_miles):
             add(biz)
     except RuntimeError as exc:
         source_errors.append(str(exc))
-    try:
-        for el in query_overpass(build_query(category, lat, lon, radius_miles)):
-            add(element_to_business(el, label))
-    except RuntimeError as exc:
-        source_errors.append(str(exc))
-    if not businesses and source_errors and len(source_errors) >= (3 if api_key else 2):
+        if warnings is not None:
+            warnings.append(str(exc))
+        print(f"[!] {exc}")
+    if len(businesses) < limit * 3:  # thin results: top up from OpenStreetMap
+        try:
+            for biz in query_nominatim(category, lat, lon, radius_miles):
+                add(biz)
+        except RuntimeError as exc:
+            source_errors.append(str(exc))
+    if len(businesses) < limit:
+        try:
+            for el in query_overpass(build_query(category, lat, lon, radius_miles)):
+                add(element_to_business(el, label))
+        except RuntimeError as exc:
+            source_errors.append(str(exc))
+    if not businesses and source_errors:
         raise RuntimeError("; ".join(source_errors))
 
     leads, seen_emails, pending = [], set(), []
     for biz in businesses.values():
         good = check_email(biz["email"]) if biz["email"] else None
         if good:
-            biz["email"], biz["email_source"] = good, "OpenStreetMap listing"
+            biz["email"], biz["email_source"] = good, f"{biz.get('source', 'Directory')} listing"
             leads.append(biz)
             seen_emails.add(good.lower())
         elif biz["website"]:
             pending.append(biz)
 
-    pool = ThreadPoolExecutor(max_workers=6)
-    futures = {pool.submit(email_from_website, biz["website"]): biz for biz in pending[:60]}
+    pool = ThreadPoolExecutor(max_workers=12)
+    futures = {pool.submit(email_from_website, biz["website"]): biz for biz in pending[:90]}
     try:
         for fut in as_completed(futures, timeout=SITE_TIME_BUDGET):
             if len(leads) >= limit:
