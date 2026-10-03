@@ -20,6 +20,7 @@ import hmac
 load_dotenv()
 
 app = Flask(__name__)
+app.url_map.strict_slashes = False
 CORS(app)
 
 # Database configuration
