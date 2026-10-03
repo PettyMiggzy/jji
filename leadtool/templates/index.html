@@ -327,7 +327,7 @@
                         <select id="propertyType" name="propertyType" required>
                             <option value="apartments">Apartment Complexes</option>
                             <option value="trailers">Trailer Parks</option>
-                            <option value="housing_companies">Property Management Companies</option>
+                            <option value="housing_companies">Property Management &amp; Real Estate</option>
                         </select>
                     </div>
 
@@ -342,34 +342,6 @@
                             value="50"
                             required
                         >
-                    </div>
-
-                    <div style="border-top: 2px solid #667eea; padding-top: 20px; margin-top: 20px;">
-                        <h3 style="font-size: 1.1em; margin-bottom: 15px; color: #333;">⚙️ Advanced Filters</h3>
-
-                        <div class="form-group">
-                            <label for="minPrice">Minimum Price ($)</label>
-                            <input
-                                type="number"
-                                id="minPrice"
-                                name="minPrice"
-                                placeholder="e.g., 500"
-                                min="0"
-                                step="100"
-                            >
-                        </div>
-
-                        <div class="form-group">
-                            <label for="maxPrice">Maximum Price ($)</label>
-                            <input
-                                type="number"
-                                id="maxPrice"
-                                name="maxPrice"
-                                placeholder="e.g., 2000"
-                                min="0"
-                                step="100"
-                            >
-                        </div>
                     </div>
 
                     <button type="submit" class="btn">🔍 Search Leads</button>
@@ -435,8 +407,7 @@
                         <th>Phone</th>
                         <th>Address</th>
                         <th>Type</th>
-                        <th>Price</th>
-                        <th>Validated</th>
+                        <th>Email check</th>
                     </tr>
                 </thead>
                 <tbody id="resultsBody">
@@ -488,8 +459,6 @@
             const radius = parseInt(radiusInput.value);
             const propertyType = propertyTypeSelect.value;
             const limit = parseInt(limitInput.value);
-            const minPrice = document.getElementById('minPrice').value ? parseInt(document.getElementById('minPrice').value) : undefined;
-            const maxPrice = document.getElementById('maxPrice').value ? parseInt(document.getElementById('maxPrice').value) : undefined;
 
             // Validation
             if (!location) {
@@ -511,9 +480,6 @@
                     property_type: propertyType,
                     limit: limit
                 };
-
-                if (minPrice !== undefined) payload.min_price = minPrice;
-                if (maxPrice !== undefined) payload.max_price = maxPrice;
 
                 const response = await fetch('/api/search', {
                     method: 'POST',
@@ -566,15 +532,13 @@
                 // Populate table
                 leads.forEach(lead => {
                     const row = document.createElement('tr');
-                    const priceText = lead.price ? `$${lead.price.toLocaleString()}` : 'N/A';
-                    const validatedBadge = lead.email_validated ? '✅ Yes' : '⚠️ No';
+                    const validatedBadge = lead.email_validated ? '✅ Domain verified' : '⚠️ Unchecked';
                     row.innerHTML = `
                         <td><strong>${escapeHtml(lead.name)}</strong></td>
                         <td><a href="mailto:${escapeHtml(lead.email)}">${escapeHtml(lead.email)}</a></td>
                         <td>${escapeHtml(lead.phone || 'N/A')}</td>
                         <td>${escapeHtml(lead.address || 'N/A')}</td>
                         <td><span style="background: #e9ecef; padding: 4px 8px; border-radius: 3px; font-size: 0.9em;">${escapeHtml(lead.type)}</span></td>
-                        <td>${priceText}</td>
                         <td>${validatedBadge}</td>
                     `;
                     resultsBody.appendChild(row);

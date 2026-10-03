@@ -6,7 +6,7 @@ Full-stack application with SQL database, real web scraping, email validation, a
 from flask import Flask, request, jsonify, render_template, session, redirect, url_for
 from flask_cors import CORS
 from models import db, Search, Lead
-from scraper_advanced import AdvancedLeadScraper
+from sources import find_leads
 from db_service import (
     init_db, save_results, get_results, list_all_searches,
     delete_search, get_statistics, search_by_filters, get_leads_by_search
@@ -114,18 +114,13 @@ def search_leads():
 
         print(f"[*] Searching for {property_type} near {location} ({lat}, {lon}) within {radius} miles")
 
-        # Initialize advanced scraper
-        scraper = AdvancedLeadScraper()
-
-        # Scrape based on property type
-        if property_type == 'apartments':
-            leads = scraper.scrape_apartments_com(location, lat, lon, radius, limit)
-        elif property_type == 'trailers':
-            leads = scraper.scrape_trailers(location, lat, lon, radius, limit)
-        elif property_type == 'housing_companies':
-            leads = scraper.scrape_property_managers(location, lat, lon, radius, limit)
-        else:
+        if property_type not in ('apartments', 'trailers', 'housing_companies'):
             return jsonify({'error': 'Invalid property type'}), 400
+
+        try:
+            leads = find_leads(property_type, lat, lon, radius, limit)
+        except RuntimeError as exc:
+            return jsonify({'error': f'Business data source unavailable, try again shortly. ({exc})'}), 503
 
         # Apply price filters if specified
         if min_price or max_price:
