@@ -4,298 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Junk Junkies - Lead Generator</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        .header {
-            text-align: center;
-            color: white;
-            margin-bottom: 40px;
-            padding: 20px 0;
-        }
-
-        .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-        }
-
-        .header p {
-            font-size: 1.1em;
-            opacity: 0.9;
-        }
-
-        .main-content {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-            margin-bottom: 30px;
-        }
-
-        .card {
-            background: white;
-            border-radius: 10px;
-            padding: 30px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-        }
-
-        .card h2 {
-            font-size: 1.5em;
-            margin-bottom: 20px;
-            color: #333;
-            border-bottom: 3px solid #667eea;
-            padding-bottom: 10px;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            color: #555;
-            font-weight: 600;
-        }
-
-        .form-group input,
-        .form-group select {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #ddd;
-            border-radius: 5px;
-            font-size: 1em;
-            transition: border-color 0.3s;
-        }
-
-        .form-group input:focus,
-        .form-group select:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        .btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 12px 30px;
-            border: none;
-            border-radius: 5px;
-            font-size: 1em;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-            width: 100%;
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
-        }
-
-        .btn:active {
-            transform: translateY(0);
-        }
-
-        .btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .btn-secondary {
-            background: #6c757d;
-            margin-top: 10px;
-        }
-
-        .btn-secondary:hover {
-            box-shadow: 0 5px 20px rgba(108, 117, 125, 0.4);
-        }
-
-        .loading {
-            display: none;
-            text-align: center;
-            color: #667eea;
-            font-weight: 600;
-            margin-top: 20px;
-        }
-
-        .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #667eea;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 10px;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .results-container {
-            background: white;
-            border-radius: 10px;
-            padding: 30px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-        }
-
-        .results-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #667eea;
-            padding-bottom: 15px;
-        }
-
-        .results-header h2 {
-            margin: 0;
-            color: #333;
-        }
-
-        .export-btn {
-            background: #28a745;
-            padding: 10px 20px;
-            font-size: 0.9em;
-        }
-
-        .export-btn:hover {
-            box-shadow: 0 5px 20px rgba(40, 167, 69, 0.4);
-        }
-
-        .results-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-
-        .results-table th {
-            background: #f8f9fa;
-            padding: 12px;
-            text-align: left;
-            font-weight: 600;
-            color: #555;
-            border-bottom: 2px solid #ddd;
-        }
-
-        .results-table td {
-            padding: 12px;
-            border-bottom: 1px solid #ddd;
-        }
-
-        .results-table tr:hover {
-            background: #f8f9fa;
-        }
-
-        .results-table a {
-            color: #667eea;
-            text-decoration: none;
-        }
-
-        .results-table a:hover {
-            text-decoration: underline;
-        }
-
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .stat-box {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 5px;
-            border-left: 4px solid #667eea;
-        }
-
-        .stat-label {
-            font-size: 0.9em;
-            color: #999;
-            margin-bottom: 5px;
-        }
-
-        .stat-value {
-            font-size: 1.8em;
-            font-weight: 700;
-            color: #333;
-        }
-
-        .error {
-            background: #f8d7da;
-            color: #721c24;
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-            display: none;
-        }
-
-        .success {
-            background: #d4edda;
-            color: #155724;
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-            display: none;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 40px;
-            color: #999;
-        }
-
-        .empty-state svg {
-            width: 80px;
-            height: 80px;
-            opacity: 0.5;
-            margin-bottom: 20px;
-        }
-
-        @media (max-width: 768px) {
-            .main-content {
-                grid-template-columns: 1fr;
-            }
-
-            .header h1 {
-                font-size: 1.8em;
-            }
-
-            .stats {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
+    {% include '_brand.html' %}
 </head>
 <body>
+    <div class="topbar"><div class="topbar-inner">
+        <a class="brand" href="https://junkjunkiesindiana.com/"><img src="https://junkjunkiesindiana.com/assets/logo-icon.png" alt="" onerror="this.style.display='none'"><span class="brand-name">JUNK<b>JUNKIES</b><small>LEAD TOOL</small></span></a>
+        <div class="header-actions"><a href="/admin/" class="logout-btn">Admin</a></div>
+    </div></div>
     <div class="container">
-        <div class="header">
-            <h1>🏢 Junk Junkies Lead Generator</h1>
-            <p>Find potential customers for junk removal services</p>
-        </div>
+        <div class="page-title"><h1>Lead Finder</h1><p>Find potential customers for junk removal services</p></div>
 
         <div class="main-content">
             <!-- Search Form -->
             <div class="card">
-                <h2>🔍 Search for Leads</h2>
+                <h2>Search for Leads</h2>
 
                 <form id="searchForm">
                     <div class="form-group">
@@ -344,7 +66,7 @@
                         >
                     </div>
 
-                    <button type="submit" class="btn">🔍 Search Leads</button>
+                    <button type="submit" class="btn">Search Leads</button>
                 </form>
 
                 <div class="loading" id="loading">
@@ -358,14 +80,14 @@
 
             <!-- Info Box -->
             <div class="card">
-                <h2>ℹ️ How to Use</h2>
-                <div style="color: #666; line-height: 1.8;">
+                <h2>ℹHow to Use</h2>
+                <div class="note">
                     <p><strong>Step 1:</strong> Enter your target location (city, state)</p>
                     <p><strong>Step 2:</strong> Set the search radius in miles</p>
                     <p><strong>Step 3:</strong> Choose the type of properties to search</p>
                     <p><strong>Step 4:</strong> Click "Search Leads" to find potential customers</p>
-                    <p style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd;">
-                        <strong>💡 Tips:</strong><br>
+                    <p style="margin-top:18px;padding-top:18px;border-top:1px solid var(--line)">
+                        <strong>Tips:</strong><br>
                         • Smaller radius = more targeted results<br>
                         • Property managers are usually the best contacts<br>
                         • Export results as CSV for email campaigns
@@ -378,10 +100,10 @@
         <div class="results-container" id="resultsSection" style="display: none;">
             <div class="results-header">
                 <div>
-                    <h2>📊 Search Results</h2>
-                    <p style="color: #999; font-size: 0.9em; margin-top: 5px;" id="resultsSummary"></p>
+                    <h2>Search Results</h2>
+                    <p class="note" style="margin-top:4px" id="resultsSummary"></p>
                 </div>
-                <button class="btn export-btn" id="exportBtn">📥 Export as CSV</button>
+                <button class="btn export-btn" id="exportBtn">Export as CSV</button>
             </div>
 
             <div class="stats">
@@ -532,13 +254,13 @@
                 // Populate table
                 leads.forEach(lead => {
                     const row = document.createElement('tr');
-                    const validatedBadge = lead.email_validated ? '✅ Domain verified' : '⚠️ Unchecked';
+                    const validatedBadge = lead.email_validated ? 'Domain verified' : 'Unchecked';
                     row.innerHTML = `
                         <td><strong>${escapeHtml(lead.name)}</strong></td>
                         <td><a href="mailto:${escapeHtml(lead.email)}">${escapeHtml(lead.email)}</a></td>
                         <td>${escapeHtml(lead.phone || 'N/A')}</td>
                         <td>${escapeHtml(lead.address || 'N/A')}</td>
-                        <td><span style="background: #e9ecef; padding: 4px 8px; border-radius: 3px; font-size: 0.9em;">${escapeHtml(lead.type)}</span></td>
+                        <td><span class="chip">${escapeHtml(lead.type)}</span></td>
                         <td>${validatedBadge}</td>
                     `;
                     resultsBody.appendChild(row);

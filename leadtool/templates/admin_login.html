@@ -4,155 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Login - Junk Junkies</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-
-        .login-container {
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            padding: 40px;
-            max-width: 400px;
-            width: 100%;
-        }
-
-        .login-header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
-        .login-header h1 {
-            font-size: 2em;
-            color: #333;
-            margin-bottom: 10px;
-        }
-
-        .login-header p {
-            color: #666;
-            font-size: 0.95em;
-        }
-
-        .lock-icon {
-            font-size: 3em;
-            margin-bottom: 15px;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            color: #555;
-            font-weight: 600;
-            font-size: 0.95em;
-        }
-
-        .form-group input {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #ddd;
-            border-radius: 5px;
-            font-size: 1em;
-            transition: border-color 0.3s;
-        }
-
-        .form-group input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        .login-btn {
-            width: 100%;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 12px;
-            border: none;
-            border-radius: 5px;
-            font-size: 1em;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-            margin-top: 10px;
-        }
-
-        .login-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
-        }
-
-        .login-btn:active {
-            transform: translateY(0);
-        }
-
-        .error-message {
-            background: #f8d7da;
-            color: #721c24;
-            padding: 12px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-            display: none;
-            border: 1px solid #f5c6cb;
-        }
-
-        .error-message.show {
-            display: block;
-        }
-
-        .back-link {
-            text-align: center;
-            margin-top: 20px;
-        }
-
-        .back-link a {
-            color: #667eea;
-            text-decoration: none;
-            font-size: 0.9em;
-        }
-
-        .back-link a:hover {
-            text-decoration: underline;
-        }
-
-        .admin-badge {
-            display: inline-block;
-            background: #667eea;
-            color: white;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.8em;
-            margin-top: 10px;
-            font-weight: 600;
-        }
-    </style>
+    {% include '_brand.html' %}
 </head>
 <body>
-    <div class="login-container">
+    <div class="login-wrap"><div class="login-container">
         <div class="login-header">
-            <div class="lock-icon">🔐</div>
-            <h1>Admin Portal</h1>
-            <p>Junk Junkies Lead Manager</p>
-            <span class="admin-badge">RESTRICTED ACCESS</span>
+            <img src="https://junkjunkiesindiana.com/assets/logo-icon.png" alt="" onerror="this.style.display='none'">
+            <h1>Lead Tool Admin</h1>
+            <p>Sign in to manage lead searches</p>
+            <span class="admin-badge">Restricted</span>
         </div>
 
         {% if error %}
         <div class="error-message show">
-            ❌ {{ error }}
+            {{ error }}
         </div>
         {% endif %}
 
@@ -169,12 +34,12 @@
                 >
             </div>
 
-            <button type="submit" class="login-btn">🔓 Access Admin Panel</button>
+            <button type="submit" class="login-btn">Access Admin Panel</button>
         </form>
 
         <div class="back-link">
-            <a href="/">← Back to Lead Generator</a>
+            <a href="https://junkjunkiesindiana.com/">Back to junkjunkiesindiana.com</a>
         </div>
-    </div>
+    </div></div>
 </body>
 </html>
