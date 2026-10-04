@@ -222,7 +222,7 @@ def header():
 <div class="max-w-7xl mx-auto px-5 h-16 flex items-center justify-between">
 <a href="/" class="flex items-center gap-2.5"><img src="/assets/logo-icon.png" width="40" height="40" alt="Junk Junkies Indiana logo" class="h-10 w-10 rounded-lg logo-pulse"><span class="display text-lg font-extrabold">JUNK<span class="text-ember">JUNKIES</span> <span class="text-bone/50 font-semibold text-xs ml-1">INDIANA</span></span></a>
 <nav class="hidden md:flex items-center gap-8 text-sm text-bone/70" aria-label="Main"><a href="/services/" class="hover:text-bone">Services</a><a href="/areas/" class="hover:text-bone">Service Area</a><a href="/our-work/" class="hover:text-bone">Our Work</a><a href="/#pricing" class="hover:text-bone">Pricing</a><a href="/#faq" class="hover:text-bone">FAQ</a></nav>
-<div class="flex items-center gap-3"><a href="tel:{PHONE_TEL}" class="hidden sm:inline-flex text-sm font-semibold text-bone/90 hover:text-ember">{PHONE_DISPLAY}</a><a href="#quote" class="inline-flex rounded-full bg-ember hover:bg-emberDark text-ink font-bold text-sm px-5 py-2.5 transition">Free Quote</a></div>
+<div class="flex items-center gap-3"><a href="tel:{PHONE_TEL}" class="hidden sm:inline-flex text-sm font-semibold text-bone/90 hover:text-ember">{PHONE_DISPLAY}</a><a href="#quote" class="inline-flex whitespace-nowrap rounded-full bg-ember hover:bg-emberDark text-ink font-bold text-sm px-4 sm:px-5 py-2.5 transition">Free Quote</a></div>
 </div></header>'''
 
 def link_cols():
@@ -242,18 +242,33 @@ def footer():
 <div class="md:hidden fixed bottom-0 inset-x-0 z-50 bg-ink/95 backdrop-blur border-t border-line grid grid-cols-3 text-center text-sm font-bold"><a href="tel:{PHONE_TEL}" class="py-4 border-r border-line">Call</a><a href="sms:{PHONE_TEL}?body=Hi%20Junk%20Junkies%2C%20I%20need%20a%20quote%20for%3A" class="py-4 border-r border-line">Text</a><a href="#quote" class="py-4 bg-ember text-ink">Quote</a></div>
 <script src="/assets/form.js" defer></script><script src="/assets/app.js" defer></script></body></html>'''
 
-def quote_form(place):
-    return f'''<section id="quote" class="py-20 bg-slate2 border-y border-line"><div class="max-w-5xl mx-auto px-5 grid lg:grid-cols-2 gap-10">
+def quote_form(place, anchor="quote-more"):
+    return f'''<section id="{anchor}" class="py-20 bg-slate2 border-y border-line"><div class="max-w-5xl mx-auto px-5 grid lg:grid-cols-2 gap-10">
 <div><p class="text-xs font-semibold tracking-widest uppercase text-ember mb-4">Free quote</p><h2 class="display text-3xl md:text-4xl font-extrabold leading-tight mb-4">Get a firm price for {place}.</h2>
 <p class="text-bone/60 mb-6">Send the details and we will text you a number. Or call <a class="text-ember font-semibold" href="tel:{PHONE_TEL}">{PHONE_DISPLAY}</a> or text photos to the same number.</p></div>
-<form id="quoteForm" class="grid sm:grid-cols-2 gap-3" aria-label="Quote request">
+<form data-quote class="grid sm:grid-cols-2 gap-3" aria-label="Quote request">
 <input type="hidden" name="access_key" value="{KEY}"><input type="hidden" name="subject" value="Quote request: {place}"><input type="hidden" name="from_name" value="Junk Junkies Indiana website"><input type="hidden" name="page" value="{place}"><input type="checkbox" name="botcheck" style="display:none">
 <input required name="name" aria-label="Full name" placeholder="Full name" class="bg-ink border border-line rounded-xl px-4 py-3 w-full focus:outline-none focus:border-ember">
 <input required name="phone" type="tel" aria-label="Mobile number" placeholder="Mobile number" class="bg-ink border border-line rounded-xl px-4 py-3 w-full focus:outline-none focus:border-ember">
 <input required name="zip" aria-label="Zip code" placeholder="Zip code" class="bg-ink border border-line rounded-xl px-4 py-3 w-full sm:col-span-2 focus:outline-none focus:border-ember">
 <textarea name="details" aria-label="What do you need hauled" rows="3" placeholder="What do you need hauled?" class="bg-ink border border-line rounded-xl px-4 py-3 w-full sm:col-span-2 focus:outline-none focus:border-ember"></textarea>
-<button type="submit" id="formBtn" class="sm:col-span-2 rounded-full bg-ember hover:bg-emberDark text-ink font-bold px-8 py-4 transition">Send My Quote Request</button>
-<p id="formMsg" class="sm:col-span-2 text-sm text-center text-bone/60" role="status"></p></form></div></section>'''
+<button type="submit" data-btn class="sm:col-span-2 rounded-full bg-ember hover:bg-emberDark text-ink font-bold px-8 py-4 transition">Send My Quote Request</button>
+<p data-msg class="sm:col-span-2 text-sm text-center text-bone/60" role="status"></p></form></div></section>'''
+
+def top_form(place, anchor=True):
+    inp = 'bg-ink border border-line rounded-xl px-4 py-3 w-full text-base focus:outline-none focus:border-ember'
+    opts = "".join(f"<option>{sv['name']}</option>" for sv in SERVICES)
+    return f"""<div {'id="quote" ' if anchor else ''}class="rounded-3xl bg-slate2/90 backdrop-blur border border-line p-5 sm:p-6 shadow-2xl scroll-mt-24">
+<div class="display text-xl sm:text-2xl font-extrabold leading-tight">Get your free quote in minutes</div>
+<p class="text-sm text-bone/60 mt-1 mb-3 sm:mb-4"><span class="hidden sm:inline">Tell us what you need. We'll text you a firm price. </span><span class="text-ember font-semibold">Licensed &amp; insured.</span></p>
+<form data-quote class="grid gap-3" aria-label="Quick quote request">
+<input type="hidden" name="access_key" value="{KEY}"><input type="hidden" name="subject" value="Quote request: {place}"><input type="hidden" name="from_name" value="Junk Junkies Indiana website"><input type="hidden" name="page" value="{place}"><input type="checkbox" name="botcheck" style="display:none">
+<input required name="name" autocomplete="name" aria-label="Your name" placeholder="Your name" class="{inp}">
+<input required name="phone" type="tel" inputmode="tel" autocomplete="tel" aria-label="Phone number" placeholder="Phone number" class="{inp}">
+<div class="grid grid-cols-5 gap-3"><input required name="zip" inputmode="numeric" autocomplete="postal-code" aria-label="Zip code" placeholder="Zip" class="{inp} col-span-2"><select name="service" aria-label="Service needed" class="{inp} col-span-3"><option value="">Service needed</option>{opts}</select></div>
+<button type="submit" data-btn class="rounded-full bg-ember hover:bg-emberDark text-ink font-bold px-8 py-4 text-base transition glow">Get My Free Quote</button>
+<p data-msg class="text-sm text-center text-bone/60" role="status"></p></form>
+<div class="text-center text-sm text-bone/60">or call / text <a class="text-ember font-semibold" href="tel:{PHONE_TEL}">{PHONE_DISPLAY}</a> with photos</div></div>"""
 
 def faq_html(faq):
     return '<div class="divide-y divide-line">' + "".join(f'<details class="py-5 group"><summary class="display font-bold text-lg cursor-pointer list-none flex justify-between gap-4">{q}<span class="text-ember group-open:rotate-45 transition">+</span></summary><p class="text-bone/60 mt-3">{a}</p></details>' for q, a in faq) + "</div>"
@@ -264,10 +279,11 @@ def crumb_html(parts):
         out.append(f'<a href="{u}" class="hover:text-ember">{n}</a>' if i < len(parts) - 1 else f'<span class="text-bone/80">{n}</span>')
     return '<nav aria-label="Breadcrumb" class="text-xs text-bone/50 mb-6 flex flex-wrap gap-2">' + ' <span>/</span> '.join(out) + "</nav>"
 
-def hero(h1, sub, crumbs_html, image="/assets/hero.webp"):
-    return f'''<section class="relative pt-28 pb-16 md:pt-36 md:pb-24 overflow-hidden"><img src="{image}" width="1280" height="720" alt="" class="absolute inset-0 w-full h-full object-cover opacity-35"><div class="absolute inset-0 bg-gradient-to-t from-ink via-ink/80 to-ink/30"></div>
-<div class="relative max-w-5xl mx-auto px-5">{crumbs_html}<h1 class="display text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-[1.02] mb-5">{h1}</h1><p class="text-lg md:text-xl text-bone/75 max-w-2xl mb-8">{sub}</p>
-<p class="text-sm font-semibold text-ember mb-5">✓ Licensed &amp; Insured</p><div class="flex flex-col sm:flex-row gap-3"><a href="#quote" class="inline-flex justify-center rounded-full bg-ember hover:bg-emberDark text-ink font-bold px-8 py-4 transition glow">Get a Free Quote</a><a href="tel:{PHONE_TEL}" class="inline-flex justify-center rounded-full border border-bone/25 hover:border-bone/60 font-semibold px-8 py-4 transition">Call {PHONE_DISPLAY}</a></div></div></section>'''
+def hero(h1, sub, crumbs_html, image="/assets/hero.webp", place="Indianapolis, IN"):
+    return f"""<section class="relative pt-24 pb-10 md:pt-32 md:pb-16 overflow-hidden"><img src="{image}" width="1280" height="720" alt="" class="absolute inset-0 w-full h-full object-cover opacity-30"><div class="absolute inset-0 bg-gradient-to-t from-ink via-ink/85 to-ink/40"></div>
+<div class="relative max-w-6xl mx-auto px-5 grid lg:grid-cols-12 gap-8 items-start"><div class="lg:col-span-7">{crumbs_html}<h1 class="display text-3xl sm:text-5xl lg:text-6xl font-extrabold leading-[1.03] mb-4">{h1}</h1><p class="hidden sm:block text-base md:text-xl text-bone/75 max-w-2xl mb-6">{sub}</p>
+<div class="hidden sm:flex gap-3"><a href="tel:{PHONE_TEL}" class="inline-flex justify-center rounded-full border border-bone/25 hover:border-bone/60 font-semibold px-8 py-4 transition">Call {PHONE_DISPLAY}</a></div></div>
+<div class="lg:col-span-5">{top_form(place)}</div></div></section>"""
 
 def write(path, html):
     p = ROOT / path.strip("/") / "index.html" if path != "/" else ROOT / "index.html"
@@ -358,7 +374,7 @@ def work_page():
 <section class="pb-20"><div class="max-w-6xl mx-auto px-5 grid lg:grid-cols-3 gap-8 items-start">
 <div class="lg:col-span-2"><div id="jobGrid" class="grid sm:grid-cols-2 gap-5"></div><div class="text-center mt-8"><button id="loadMore" type="button" class="hidden rounded-full bg-ember hover:bg-emberDark text-ink font-bold px-8 py-4 transition">Show all jobs</button></div></div>
 <aside class="lg:sticky lg:top-24 rounded-3xl border border-line bg-slate2 p-5" aria-label="Recent jobs"><h2 class="display text-xl font-extrabold mb-3">Recent jobs</h2><div id="jobSide" class="space-y-1"></div><a href="#quote" class="mt-4 block text-center rounded-full bg-ember hover:bg-emberDark text-ink font-bold px-6 py-3 transition">Get a free quote</a></aside></div></section>
-{reviews_live()}{quote_form("Indianapolis, IN")}</main>"""
+{reviews_live()}{quote_form("Indianapolis, IN", "quote")}</main>"""
     write(path, head(title, desc, path, schema, MAP_CSS) + header() + body + footer())
 
 def crew_page():
