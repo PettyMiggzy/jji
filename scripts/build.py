@@ -221,7 +221,7 @@ def header():
     return f'''<header class="fixed top-0 inset-x-0 z-50 backdrop-blur-md bg-ink/80 border-b border-line">
 <div class="max-w-7xl mx-auto px-5 h-16 flex items-center justify-between">
 <a href="/" class="flex items-center gap-2.5"><img src="/assets/logo-icon.png" width="40" height="40" alt="Junk Junkies Indiana logo" class="h-10 w-10 rounded-lg logo-pulse"><span class="display text-lg font-extrabold">JUNK<span class="text-ember">JUNKIES</span> <span class="text-bone/50 font-semibold text-xs ml-1">INDIANA</span></span></a>
-<nav class="hidden md:flex items-center gap-8 text-sm text-bone/70" aria-label="Main"><a href="/services/" class="hover:text-bone">Services</a><a href="/areas/" class="hover:text-bone">Service Area</a><a href="/#pricing" class="hover:text-bone">Pricing</a><a href="/#faq" class="hover:text-bone">FAQ</a></nav>
+<nav class="hidden md:flex items-center gap-8 text-sm text-bone/70" aria-label="Main"><a href="/services/" class="hover:text-bone">Services</a><a href="/areas/" class="hover:text-bone">Service Area</a><a href="/our-work/" class="hover:text-bone">Our Work</a><a href="/#pricing" class="hover:text-bone">Pricing</a><a href="/#faq" class="hover:text-bone">FAQ</a></nav>
 <div class="flex items-center gap-3"><a href="tel:{PHONE_TEL}" class="hidden sm:inline-flex text-sm font-semibold text-bone/90 hover:text-ember">{PHONE_DISPLAY}</a><a href="#quote" class="inline-flex rounded-full bg-ember hover:bg-emberDark text-ink font-bold text-sm px-5 py-2.5 transition">Free Quote</a></div>
 </div></header>'''
 
@@ -240,7 +240,7 @@ def footer():
 <div class="mt-6 font-semibold mb-3">Sister sites</div><a rel="noopener" href="https://junkjunkiestexas.com" class="block text-bone/60 hover:text-ember">Junk Junkies Texas</a><a rel="noopener" href="https://junkjunkiesflorida.com" class="block text-bone/60 hover:text-ember">Junk Junkies Florida</a></div>
 </div><div class="max-w-7xl mx-auto px-5 mt-12 text-xs text-bone/40">© {datetime.date.today().year} Junk Junkies Indiana. All rights reserved.</div></footer>
 <div class="md:hidden fixed bottom-0 inset-x-0 z-50 bg-ink/95 backdrop-blur border-t border-line grid grid-cols-3 text-center text-sm font-bold"><a href="tel:{PHONE_TEL}" class="py-4 border-r border-line">Call</a><a href="sms:{PHONE_TEL}?body=Hi%20Junk%20Junkies%2C%20I%20need%20a%20quote%20for%3A" class="py-4 border-r border-line">Text</a><a href="#quote" class="py-4 bg-ember text-ink">Quote</a></div>
-<script src="/assets/form.js" defer></script></body></html>'''
+<script src="/assets/form.js" defer></script><script src="/assets/app.js" defer></script></body></html>'''
 
 def quote_form(place):
     return f'''<section id="quote" class="py-20 bg-slate2 border-y border-line"><div class="max-w-5xl mx-auto px-5 grid lg:grid-cols-2 gap-10">
@@ -335,7 +335,51 @@ def hub(path, title, desc, h1, sub, cards, crumb_name):
     body = f'''<main>{hero(h1, sub, crumb_html([("Home","/"),(crumb_name,path)]))}<section class="py-16"><div class="max-w-6xl mx-auto px-5 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">{cards}</div></section>{quote_form("Indianapolis, IN")}</main>'''
     write(path, head(title, desc, path, schema) + header() + body + footer())
 
+
+MAP_CSS = '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">'
+LEAFLET_JS = '<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js" defer></script>'
+
+def reviews_live():
+    return """<section class="py-16 bg-slate2 border-y border-line hidden" id="reviewsLive"><div class="max-w-6xl mx-auto px-5"><div class="flex flex-wrap items-end justify-between gap-3 mb-8"><h2 class="display text-3xl font-extrabold">What customers say</h2><div class="text-sm text-bone/70" data-head>Reviews from Google</div></div><div class="grid md:grid-cols-3 gap-4" data-grid></div><a data-link target="_blank" rel="noopener" class="inline-block mt-6 text-sm text-ember font-semibold" href="#">Read all reviews on Google</a></div></section>"""
+
+def home_jobs():
+    return """<section id="homeJobs" class="hidden py-16"><div class="max-w-6xl mx-auto px-5"><div class="flex items-end justify-between mb-8"><h2 class="display text-3xl font-extrabold">Recent jobs</h2><a href="/our-work/" class="text-sm text-ember font-semibold">See all our work</a></div><div class="grid md:grid-cols-3 gap-4" data-grid></div></div></section>"""
+
+def work_page():
+    path = "/our-work/"
+    pts = [{"n": x["name"], "lat": x["lat"], "lon": x["lon"], "u": f"/{x['slug']}-junk-removal/"} for x in CITIES]
+    title = "Our Work | Completed Junk Removal Jobs in Indianapolis, IN | Junk Junkies"
+    desc = "See recent completed junk removal jobs around Indianapolis: before and after photos, locations and what we hauled."
+    schema = ld(business_schema(), crumbs([("Home", "/"), ("Our Work", path)]))
+    body = f"""<main><section class="pt-28 pb-12 md:pt-36 md:pb-16 border-b border-line" style="background:radial-gradient(circle at 70% 30%,rgba(20,245,0,.14),transparent 60%),#06120F"><div class="max-w-6xl mx-auto px-5">{crumb_html([("Home","/"),("Our Work",path)])}<h1 class="display text-5xl sm:text-6xl lg:text-7xl font-extrabold leading-[0.98] mb-4">See Our Work</h1><p class="text-lg text-bone/70 max-w-2xl">Real jobs from our crew around Indianapolis and the surrounding cities. Every pin on the map is a completed job.</p><p class="mt-4 text-sm text-ember font-semibold" id="jobCount"></p></div></section>
+<section class="py-10"><div class="max-w-6xl mx-auto px-5"><div id="jjMap" class="relative w-full h-[28rem] md:h-[32rem] rounded-3xl border border-line overflow-hidden" data-cities='{json.dumps(pts)}' role="region" aria-label="Map of completed jobs"></div></div>{LEAFLET_JS}</section>
+<section class="pb-20"><div class="max-w-6xl mx-auto px-5 grid lg:grid-cols-3 gap-8 items-start">
+<div class="lg:col-span-2"><div id="jobGrid" class="grid sm:grid-cols-2 gap-5"></div><div class="text-center mt-8"><button id="loadMore" type="button" class="hidden rounded-full bg-ember hover:bg-emberDark text-ink font-bold px-8 py-4 transition">Show all jobs</button></div></div>
+<aside class="lg:sticky lg:top-24 rounded-3xl border border-line bg-slate2 p-5" aria-label="Recent jobs"><h2 class="display text-xl font-extrabold mb-3">Recent jobs</h2><div id="jobSide" class="space-y-1"></div><a href="#quote" class="mt-4 block text-center rounded-full bg-ember hover:bg-emberDark text-ink font-bold px-6 py-3 transition">Get a free quote</a></aside></div></section>
+{reviews_live()}{quote_form("Indianapolis, IN")}</main>"""
+    write(path, head(title, desc, path, schema, MAP_CSS) + header() + body + footer())
+
+def crew_page():
+    path = "/crew/"
+    pts = [{"n": x["name"], "lat": x["lat"], "lon": x["lon"]} for x in CITIES]
+    inp = "bg-ink border border-line rounded-xl px-4 py-3 w-full focus:outline-none focus:border-ember"
+    city_opts = "".join(f"<option>{x['name']}</option>" for x in CITIES)
+    svc_opts = "".join(f"<option>{s['name']}</option>" for s in SERVICES)
+    body = f"""<main class="pt-24 pb-24"><div class="max-w-xl mx-auto px-5"><h1 class="display text-3xl font-extrabold mb-2">Post a finished job</h1><p class="text-bone/60 mb-6">Crew only. Take photos at the job site and they go on the Our Work page and map.</p>
+<form id="crewForm" class="grid gap-4" data-cities='{json.dumps(pts)}'>
+<input name="pin" type="password" inputmode="numeric" placeholder="Crew PIN" autocomplete="off" required class="{inp}">
+<select name="service" required class="{inp}"><option value="">What did you haul?</option>{svc_opts}</select>
+<select name="city" required class="{inp}"><option value="">City</option>{city_opts}</select>
+<input name="area" placeholder="Neighborhood (optional, no street addresses)" class="{inp}">
+<button type="button" id="gpsBtn" class="rounded-xl border border-line px-4 py-3 text-left">📍 Use my location</button>
+<label class="block"><span class="text-sm text-bone/70">Before photo (optional)</span><input name="before" type="file" accept="image/*" capture="environment" class="mt-1 block w-full text-sm"></label>
+<label class="block"><span class="text-sm text-bone/70">After photo (required)</span><input name="after" type="file" accept="image/*" capture="environment" required class="mt-1 block w-full text-sm"></label>
+<textarea name="description" rows="3" maxlength="600" placeholder="1-3 sentences about the job" class="{inp}"></textarea>
+<button id="crewBtn" class="rounded-full bg-ember hover:bg-emberDark text-ink font-bold px-8 py-4 transition">Post to map</button><p id="crewMsg" class="text-sm text-bone/70" role="status"></p></form><p class="text-xs text-bone/40 mt-6">Do not include customer faces, house numbers, license plates or street addresses. Pins are shown only to about 1 km.</p></div></main>"""
+    write(path, head("Crew upload | Junk Junkies Indiana", "Crew upload", path, "", '<meta name="robots" content="noindex, nofollow">').replace('<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">', "") + header() + body + footer().replace("/assets/form.js", "/assets/crew.js"))
+
 def build():
+    work_page(); crew_page()
     for c in CITIES: city_page(c)
     for s in SERVICES: service_page(s)
     cc = "".join(f'<a href="/{c["slug"]}-junk-removal/" class="rounded-2xl bg-slate2 border border-line p-6 hover:border-ember/60 transition"><h2 class="display font-bold text-xl mb-1">Junk Removal in {c["name"]}</h2><p class="text-sm text-bone/60">{c["county"]} County · {c["zips"]}</p></a>' for c in CITIES)
@@ -344,9 +388,9 @@ def build():
     hub("/services/", "Junk Removal Services Indianapolis | Cleanouts, Furniture, Appliances | Junk Junkies", f"Basement and estate cleanouts, furniture and appliance removal, storm debris, demolition and commercial junk removal in Indianapolis. Call {PHONE_DISPLAY}.", "Junk Removal Services", "Everything from a single couch to a whole-house cleanout, hauled away with upfront pricing.", sc, "Services")
 
     # sitemap / robots / manifest / llms / 404
-    urls = [("/", "1.0")] + [("/areas/", "0.8"), ("/services/", "0.8")] + [(f"/{s['slug']}/", "0.8") for s in SERVICES] + [(f"/{c['slug']}-junk-removal/", "0.9" if c['slug'] == 'indianapolis' else "0.7") for c in CITIES]
+    urls = [("/", "1.0")] + [("/areas/", "0.8"), ("/services/", "0.8"), ("/our-work/", "0.6")] + [(f"/{s['slug']}/", "0.8") for s in SERVICES] + [(f"/{c['slug']}-junk-removal/", "0.9" if c['slug'] == 'indianapolis' else "0.7") for c in CITIES]
     (ROOT / "sitemap.xml").write_text('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' + "".join(f"<url><loc>{BASE}{u}</loc><lastmod>{TODAY}</lastmod><changefreq>weekly</changefreq><priority>{p}</priority></url>\n" for u, p in urls) + "</urlset>\n")
-    (ROOT / "robots.txt").write_text(f"User-agent: *\nAllow: /\nDisallow: /scripts/\nDisallow: /tools/\n\nSitemap: {BASE}/sitemap.xml\n")
+    (ROOT / "robots.txt").write_text(f"User-agent: *\nAllow: /\nDisallow: /scripts/\nDisallow: /tools/\nDisallow: /crew/\nDisallow: /api/\n\nSitemap: {BASE}/sitemap.xml\n")
     (ROOT / "site.webmanifest").write_text(json.dumps({"name": "Junk Junkies Indiana", "short_name": "Junk Junkies", "start_url": "/", "display": "standalone", "background_color": "#0B0D10", "theme_color": "#14F500", "icons": [{"src": "/assets/logo-icon.png", "sizes": "256x256", "type": "image/png"}]}))
     (ROOT / "llms.txt").write_text(f"# Junk Junkies Indiana\n\n> Junk removal, cleanouts and light demolition in Indianapolis and surrounding Indiana cities. Phone/text: {PHONE_DISPLAY}. Part of Junk Junkies (Texas HQ, Florida, Indiana).\n\n## Services\n" + "".join(f"- [{s['name']}]({BASE}/{s['slug']}/): {s['blurb']}\n" for s in SERVICES) + "\n## Service area\n" + "".join(f"- [{c['name']}, IN]({BASE}/{c['slug']}-junk-removal/)\n" for c in CITIES))
     (ROOT / "404.html").write_text(head("Page not found | Junk Junkies Indiana", "That page does not exist. Call Junk Junkies Indiana for junk removal in Indianapolis.", "/404", "", '<meta name="robots" content="noindex">').replace('<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">', "") + header() + f'<main class="min-h-[70vh] grid place-items-center text-center px-5 pt-24"><div><h1 class="display text-5xl font-extrabold mb-4">Page not found.</h1><p class="text-bone/60 mb-6">But we can still haul your junk.</p><a href="/" class="rounded-full bg-ember text-ink font-bold px-8 py-4">Back to home</a></div></main>' + footer())

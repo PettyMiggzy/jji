@@ -2,5 +2,7 @@ User-agent: *
 Allow: /
 Disallow: /scripts/
 Disallow: /tools/
+Disallow: /crew/
+Disallow: /api/
 
 Sitemap: https://junkjunkiesindiana.com/sitemap.xml
