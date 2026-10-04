@@ -266,6 +266,7 @@ def top_form(place, anchor=True):
 <input required name="name" autocomplete="name" aria-label="Your name" placeholder="Your name" class="{inp}">
 <input required name="phone" type="tel" inputmode="tel" autocomplete="tel" aria-label="Phone number" placeholder="Phone number" class="{inp}">
 <div class="grid grid-cols-5 gap-3"><input required name="zip" inputmode="numeric" autocomplete="postal-code" aria-label="Zip code" placeholder="Zip" class="{inp} col-span-2"><select name="service" aria-label="Service needed" class="{inp} col-span-3"><option value="">Service needed</option>{opts}</select></div>
+<textarea name="message" rows="2" maxlength="600" aria-label="Notes" placeholder="Notes (what needs to go, stairs, timing...)" class="{inp} resize-none"></textarea>
 <button type="submit" data-btn class="rounded-full bg-ember hover:bg-emberDark text-ink font-bold px-8 py-4 text-base transition glow">Get My Free Quote</button>
 <p data-msg class="text-sm text-center text-bone/60" role="status"></p></form>
 <div class="text-center text-sm text-bone/60">or call / text <a class="text-ember font-semibold" href="tel:{PHONE_TEL}">{PHONE_DISPLAY}</a> with photos</div></div>"""
