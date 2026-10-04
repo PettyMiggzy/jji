@@ -4,5 +4,6 @@ Disallow: /scripts/
 Disallow: /tools/
 Disallow: /crew/
 Disallow: /api/
+Disallow: /admin/
 
 Sitemap: https://junkjunkiesindiana.com/sitemap.xml

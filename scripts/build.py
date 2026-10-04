@@ -336,6 +336,8 @@ def hub(path, title, desc, h1, sub, cards, crumb_name):
     write(path, head(title, desc, path, schema) + header() + body + footer())
 
 
+ROUTES = json.loads((ROOT / 'scripts' / 'routes.json').read_text())
+DOMAINS = {'spring': 'junkjunkiestexas.com', 'tomball': 'junkjunkiestomball.com', 'cypress': 'junkjunkiescypress.com', 'college-station': 'junkjunkiescollegestation.com', 'indiana': 'junkjunkiesindiana.com'}
 MAP_CSS = '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">'
 LEAFLET_JS = '<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js" defer></script>'
 
@@ -361,25 +363,32 @@ def work_page():
 
 def crew_page():
     path = "/crew/"
-    pts = [{"n": x["name"], "lat": x["lat"], "lon": x["lon"]} for x in CITIES]
+    pts = [{"n": ct[0], "lat": ct[1], "lon": ct[2]} for r in ROUTES.values() for ct in r["cities"]]
     inp = "bg-ink border border-line rounded-xl px-4 py-3 w-full focus:outline-none focus:border-ember"
-    city_opts = "".join(f"<option>{x['name']}</option>" for x in CITIES)
+    city_opts = "".join(f'<optgroup label="{r["name"]}">' + "".join(f"<option>{ct[0]}</option>" for ct in r["cities"]) + "</optgroup>" for r in ROUTES.values())
     svc_opts = "".join(f"<option>{s['name']}</option>" for s in SERVICES)
-    body = f"""<main class="pt-24 pb-24"><div class="max-w-xl mx-auto px-5"><h1 class="display text-3xl font-extrabold mb-2">Post a finished job</h1><p class="text-bone/60 mb-6">Crew only. Take photos at the job site and they go on the Our Work page and map.</p>
+    body = f"""<main class="pt-24 pb-24"><div class="max-w-xl mx-auto px-5"><h1 class="display text-3xl font-extrabold mb-2">Post a finished job</h1><p class="text-bone/60 mb-6">Crew only. Take photos at the job site. The job is placed on the right website's map and Google profile automatically from your location.</p>
 <form id="crewForm" class="grid gap-4" data-cities='{json.dumps(pts)}'>
 <input name="pin" type="password" inputmode="numeric" placeholder="Crew PIN" autocomplete="off" required class="{inp}">
 <select name="service" required class="{inp}"><option value="">What did you haul?</option>{svc_opts}</select>
-<select name="city" required class="{inp}"><option value="">City</option>{city_opts}</select>
+<button type="button" id="gpsBtn" class="rounded-xl border border-line px-4 py-3 text-left">📍 Use my location (recommended)</button>
+<select name="city" class="{inp}"><option value="">...or pick the city</option>{city_opts}</select>
 <input name="area" placeholder="Neighborhood (optional, no street addresses)" class="{inp}">
-<button type="button" id="gpsBtn" class="rounded-xl border border-line px-4 py-3 text-left">📍 Use my location</button>
 <label class="block"><span class="text-sm text-bone/70">Before photo (optional)</span><input name="before" type="file" accept="image/*" capture="environment" class="mt-1 block w-full text-sm"></label>
 <label class="block"><span class="text-sm text-bone/70">After photo (required)</span><input name="after" type="file" accept="image/*" capture="environment" required class="mt-1 block w-full text-sm"></label>
 <textarea name="description" rows="3" maxlength="600" placeholder="1-3 sentences about the job" class="{inp}"></textarea>
-<button id="crewBtn" class="rounded-full bg-ember hover:bg-emberDark text-ink font-bold px-8 py-4 transition">Post to map</button><p id="crewMsg" class="text-sm text-bone/70" role="status"></p></form><p class="text-xs text-bone/40 mt-6">Do not include customer faces, house numbers, license plates or street addresses. Pins are shown only to about 1 km.</p></div></main>"""
+<label class="flex items-center gap-3 text-sm text-bone/70"><input type="checkbox" name="gbp" checked class="accent-ember w-5 h-5"> Also post to our Google Business Profile</label>
+<button id="crewBtn" class="rounded-full bg-ember hover:bg-emberDark text-ink font-bold px-8 py-4 transition">Post job</button><p id="crewMsg" class="text-sm text-bone/70" role="status"></p></form><p class="text-xs text-bone/40 mt-6">Do not include customer faces, house numbers, license plates or street addresses. Photos are posted publicly. Map pins are shown only to about 1 km.</p></div></main>"""
     write(path, head("Crew upload | Junk Junkies Indiana", "Crew upload", path, "", '<meta name="robots" content="noindex, nofollow">').replace('<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">', "") + header() + body + footer().replace("/assets/form.js", "/assets/crew.js"))
 
+def admin_page():
+    path = "/admin/"
+    names = {k: {"name": v["name"], "domain": DOMAINS[k]} for k, v in ROUTES.items()}
+    body = f"""<main class="pt-28 pb-24"><div class="max-w-6xl mx-auto px-5"><h1 class="display text-4xl font-extrabold mb-2">Owner dashboard</h1><p class="text-bone/60 mb-8">All sites in one place: jobs, Google posting status and quick controls. Needs the admin PIN.</p><div id="adminApp" data-sites='{json.dumps(names)}'></div></div></main>"""
+    write(path, head("Dashboard", "Owner dashboard", path, "", '<meta name="robots" content="noindex, nofollow">').replace('<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">', "") + header() + body + footer().replace("/assets/form.js", "/assets/admin.js"))
+
 def build():
-    work_page(); crew_page()
+    work_page(); crew_page(); admin_page()
     for c in CITIES: city_page(c)
     for s in SERVICES: service_page(s)
     cc = "".join(f'<a href="/{c["slug"]}-junk-removal/" class="rounded-2xl bg-slate2 border border-line p-6 hover:border-ember/60 transition"><h2 class="display font-bold text-xl mb-1">Junk Removal in {c["name"]}</h2><p class="text-sm text-bone/60">{c["county"]} County · {c["zips"]}</p></a>' for c in CITIES)
@@ -390,7 +399,7 @@ def build():
     # sitemap / robots / manifest / llms / 404
     urls = [("/", "1.0")] + [("/areas/", "0.8"), ("/services/", "0.8"), ("/our-work/", "0.6")] + [(f"/{s['slug']}/", "0.8") for s in SERVICES] + [(f"/{c['slug']}-junk-removal/", "0.9" if c['slug'] == 'indianapolis' else "0.7") for c in CITIES]
     (ROOT / "sitemap.xml").write_text('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' + "".join(f"<url><loc>{BASE}{u}</loc><lastmod>{TODAY}</lastmod><changefreq>weekly</changefreq><priority>{p}</priority></url>\n" for u, p in urls) + "</urlset>\n")
-    (ROOT / "robots.txt").write_text(f"User-agent: *\nAllow: /\nDisallow: /scripts/\nDisallow: /tools/\nDisallow: /crew/\nDisallow: /api/\n\nSitemap: {BASE}/sitemap.xml\n")
+    (ROOT / "robots.txt").write_text(f"User-agent: *\nAllow: /\nDisallow: /scripts/\nDisallow: /tools/\nDisallow: /crew/\nDisallow: /api/\nDisallow: /admin/\n\nSitemap: {BASE}/sitemap.xml\n")
     (ROOT / "site.webmanifest").write_text(json.dumps({"name": "Junk Junkies Indiana", "short_name": "Junk Junkies", "start_url": "/", "display": "standalone", "background_color": "#0B0D10", "theme_color": "#14F500", "icons": [{"src": "/assets/logo-icon.png", "sizes": "256x256", "type": "image/png"}]}))
     (ROOT / "llms.txt").write_text(f"# Junk Junkies Indiana\n\n> Junk removal, cleanouts and light demolition in Indianapolis and surrounding Indiana cities. Phone/text: {PHONE_DISPLAY}. Part of Junk Junkies (Texas HQ, Florida, Indiana).\n\n## Services\n" + "".join(f"- [{s['name']}]({BASE}/{s['slug']}/): {s['blurb']}\n" for s in SERVICES) + "\n## Service area\n" + "".join(f"- [{c['name']}, IN]({BASE}/{c['slug']}-junk-removal/)\n" for c in CITIES))
     (ROOT / "404.html").write_text(head("Page not found | Junk Junkies Indiana", "That page does not exist. Call Junk Junkies Indiana for junk removal in Indianapolis.", "/404", "", '<meta name="robots" content="noindex">').replace('<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">', "") + header() + f'<main class="min-h-[70vh] grid place-items-center text-center px-5 pt-24"><div><h1 class="display text-5xl font-extrabold mb-4">Page not found.</h1><p class="text-bone/60 mb-6">But we can still haul your junk.</p><a href="/" class="rounded-full bg-ember text-ink font-bold px-8 py-4">Back to home</a></div></main>' + footer())

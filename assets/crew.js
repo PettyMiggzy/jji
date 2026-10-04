@@ -21,14 +21,14 @@
     e.preventDefault(); var b = $('#crewBtn'), after = $('[name=after]').files[0], before = $('[name=before]').files[0];
     if (!after) { msg.textContent = 'Add an "after" photo.'; return; }
     var city = $('[name=city]').value, c = cities.filter(function (x) { return x.n === city; })[0];
-    var p = pos || (c ? { lat: c.lat, lon: c.lon } : null); if (!p) { msg.textContent = 'Pick a city or use GPS.'; return; }
+    var p = pos || (c ? { lat: c.lat, lon: c.lon } : null); if (!p) { msg.textContent = 'Tap "Use my location" or pick the city.'; return; }
     b.disabled = true; msg.textContent = 'Uploading...';
     Promise.all([toJpeg(after), before ? toJpeg(before) : Promise.resolve(null)]).then(function (im) {
-      return fetch('/api/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-crew-pin': pin.value }, body: JSON.stringify({ service: $('[name=service]').value, city: city, area: $('[name=area]').value, lat: p.lat, lon: p.lon, description: $('[name=description]').value, after: im[0], before: im[1] }) });
+      return fetch('/api/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-crew-pin': pin.value }, body: JSON.stringify({ service: $('[name=service]').value, city: city || 'Auto', gbp: $('[name=gbp]').checked, area: $('[name=area]').value, lat: p.lat, lon: p.lon, description: $('[name=description]').value, after: im[0], before: im[1] }) });
     }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); }).then(function (r) {
       if (!r.ok) throw new Error(r.j.error || 'Upload failed');
       try { localStorage.setItem('jjpin', pin.value); } catch (e) {}
-      msg.textContent = '✓ Posted! It is on the map now.'; f.reset(); pos = null; $('#gpsBtn').textContent = '📍 Use my location'; pin.value = localStorage.getItem('jjpin') || '';
+      msg.textContent = '✓ Posted to ' + (r.j.siteName || 'the site') + ' (' + (r.j.city || '') + ')' + (r.j.gbp === 'done' ? ' and Google.' : r.j.gbp === 'failed' ? '. Google upload failed, it will retry.' : '.'); f.reset(); pos = null; $('#gpsBtn').textContent = '📍 Use my location (recommended)'; pin.value = localStorage.getItem('jjpin') || '';
     }).catch(function (err) { msg.textContent = '⚠ ' + err.message; }).then(function () { b.disabled = false; });
   });
 })();

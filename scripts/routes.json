@@ -1,0 +1,172 @@
+{
+ "spring": {
+  "name": "Junk Junkies Spring",
+  "cities": [
+   [
+    "Spring",
+    30.0799,
+    -95.4172
+   ],
+   [
+    "Klein",
+    30.0316,
+    -95.5272
+   ],
+   [
+    "The Woodlands",
+    30.1658,
+    -95.4613
+   ],
+   [
+    "Humble",
+    29.9988,
+    -95.2622
+   ]
+  ]
+ },
+ "tomball": {
+  "name": "Junk Junkies Tomball",
+  "cities": [
+   [
+    "Tomball",
+    30.0972,
+    -95.6161
+   ],
+   [
+    "Magnolia",
+    30.2091,
+    -95.7508
+   ],
+   [
+    "Pinehurst",
+    30.1527,
+    -95.6958
+   ]
+  ]
+ },
+ "cypress": {
+  "name": "Junk Junkies Cypress",
+  "cities": [
+   [
+    "Cypress",
+    29.9691,
+    -95.6972
+   ],
+   [
+    "Jersey Village",
+    29.8897,
+    -95.5699
+   ],
+   [
+    "Hockley",
+    30.0291,
+    -95.8508
+   ]
+  ]
+ },
+ "college-station": {
+  "name": "Junk Junkies College Station",
+  "cities": [
+   [
+    "College Station",
+    30.628,
+    -96.3344
+   ],
+   [
+    "Bryan",
+    30.6744,
+    -96.3699
+   ],
+   [
+    "Navasota",
+    30.388,
+    -96.0877
+   ]
+  ]
+ },
+ "indiana": {
+  "name": "Junk Junkies Indiana",
+  "cities": [
+   [
+    "Indianapolis",
+    39.7684,
+    -86.1581
+   ],
+   [
+    "Carmel",
+    39.9784,
+    -86.118
+   ],
+   [
+    "Fishers",
+    39.9568,
+    -86.0134
+   ],
+   [
+    "Noblesville",
+    40.0456,
+    -86.0086
+   ],
+   [
+    "Westfield",
+    40.0428,
+    -86.1275
+   ],
+   [
+    "Zionsville",
+    39.9509,
+    -86.2619
+   ],
+   [
+    "Greenwood",
+    39.6137,
+    -86.1067
+   ],
+   [
+    "Franklin",
+    39.4806,
+    -86.0545
+   ],
+   [
+    "Avon",
+    39.7628,
+    -86.3997
+   ],
+   [
+    "Plainfield",
+    39.7043,
+    -86.3994
+   ],
+   [
+    "Brownsburg",
+    39.8434,
+    -86.3978
+   ],
+   [
+    "Lawrence",
+    39.8386,
+    -86.0258
+   ],
+   [
+    "Speedway",
+    39.7915,
+    -86.236
+   ],
+   [
+    "Beech Grove",
+    39.7219,
+    -86.0897
+   ],
+   [
+    "Greenfield",
+    39.7851,
+    -85.7697
+   ],
+   [
+    "Mooresville",
+    39.6128,
+    -86.3744
+   ]
+  ]
+ }
+}
