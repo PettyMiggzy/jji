@@ -4,7 +4,6 @@ plus the contact emails those businesses publish on their own websites.
 No emails are guessed or generated; every returned email was found in a tag or a page.
 """
 
-import os
 import re
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError as FuturesTimeout
@@ -406,61 +405,6 @@ def query_overture(category, lat, lon, radius_miles):
     return [biz for _, biz in found[:500]]
 
 
-GOOGLE_TERMS = {
-    "apartments": ["apartment complex", "apartment community"],
-    "trailers": ["mobile home park", "trailer park"],
-    "housing_companies": ["property management company", "real estate agency"],
-}
-GOOGLE_URL = "https://places.googleapis.com/v1/places:searchText"
-
-
-def query_google_places(category, lat, lon, radius_miles, api_key):
-    """Google Places (New) text search; needs GOOGLE_MAPS_API_KEY. Returns businesses with websites."""
-    radius_m = min(radius_miles * METERS_PER_MILE, 50000)  # Places circle bias max is 50 km
-    label = CATEGORIES[category][0]
-    headers = {
-        "X-Goog-Api-Key": api_key,
-        "X-Goog-FieldMask": "places.displayName,places.websiteUri,places.nationalPhoneNumber,places.formattedAddress,places.location,nextPageToken",
-        "Content-Type": "application/json",
-    }
-    found, errors = [], 0
-    for term in GOOGLE_TERMS[category]:
-        body = {"textQuery": term, "pageSize": 20,
-                "locationBias": {"circle": {"center": {"latitude": lat, "longitude": lon}, "radius": radius_m}}}
-        for _ in range(3):
-            try:
-                resp = requests.post(GOOGLE_URL, json=body, headers=headers, timeout=15)
-                if resp.status_code != 200:
-                    try:
-                        detail = resp.json().get("error", {}).get("message", "")
-                    except ValueError:
-                        detail = ""
-                    raise RuntimeError(f"Google Places error {resp.status_code}: {detail[:200]}")
-                data = resp.json()
-            except requests.RequestException:
-                errors += 1
-                break
-            for pl in data.get("places", []):
-                loc = pl.get("location") or {}
-                if loc and miles_between(lat, lon, loc["latitude"], loc["longitude"]) > radius_miles:
-                    continue
-                found.append({
-                    "name": (pl.get("displayName") or {}).get("text"),
-                    "email": None,
-                    "phone": pl.get("nationalPhoneNumber"),
-                    "address": pl.get("formattedAddress"),
-                    "website": pl.get("websiteUri"),
-                    "type": label,
-                    "source": "Google Places",
-                })
-            if not data.get("nextPageToken"):
-                break
-            body["pageToken"] = data["nextPageToken"]
-    if errors and not found:
-        raise RuntimeError("Google Places unavailable (network error)")
-    return found
-
-
 def is_directory(url):
     host = urlparse(url).netloc.lower().replace("www.", "")
     return any(host == d or host.endswith("." + d) for d in DIRECTORY_HOSTS)
@@ -475,16 +419,6 @@ def find_leads(category, lat, lon, radius_miles, limit, warnings=None):
         if biz["name"] and (biz["email"] or (biz["website"] and not is_directory(biz["website"]))):
             businesses.setdefault((biz["name"].lower(), biz["address"] or biz["website"] or biz["email"]), biz)
 
-    api_key = os.environ.get("GOOGLE_MAPS_API_KEY")
-    if api_key and category in GOOGLE_TERMS:
-        try:
-            for biz in query_google_places(category, lat, lon, radius_miles, api_key):
-                add(biz)
-        except RuntimeError as exc:
-            source_errors.append(str(exc))
-            if warnings is not None:
-                warnings.append(str(exc))
-            print(f"[!] {exc}")
     try:
         for biz in query_overture(category, lat, lon, radius_miles):
             add(biz)

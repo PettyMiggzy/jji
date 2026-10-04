@@ -9,7 +9,6 @@ No emails are guessed or generated. Every email comes from a business listing or
 1. **Locate** the search center from a US ZIP code or "City, ST" using a bundled lookup table (GeoNames postal codes, CC BY 4.0, https://www.geonames.org). This never calls a rate-limited web service. Other text falls back to Nominatim.
 2. **Find businesses** inside the radius:
    - **Overture Maps places** (free open dataset on public S3, queried with DuckDB): nationwide listings with websites and sometimes emails. Main source.
-   - Google Places text search, only when `GOOGLE_MAPS_API_KEY` is set and billing is enabled.
    - OpenStreetMap via Nominatim and Overpass as a top-up when results are thin (free, sparse).
 3. **Get the email**: use the listing's email tag if present, otherwise fetch the business's homepage plus `/contact` and `/contact-us` (robots.txt respected), reading `mailto:` links and visible addresses. Directory and social sites (Yelp, Facebook, etc.) are skipped because their emails are not the business's.
 4. **Check the email**: syntax plus DNS (domain can receive mail). This does not prove a mailbox exists. Role mailboxes like `donations@` and `noreply@` are dropped, and duplicates are removed.
@@ -22,8 +21,6 @@ Search time is bounded to fit hosting limits. Emails are never sent by this tool
 cd leadtool
 pip install -r requirements.txt
 export SECRET_KEY=any-long-random-string ADMIN_PASSWORD=choose-one
-# optional, enables Google Places:
-export GOOGLE_MAPS_API_KEY=your-key
 python app.py          # http://localhost:5000
 ```
 
