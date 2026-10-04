@@ -6,16 +6,20 @@ Full-stack application with SQL database, real web scraping, email validation, a
 from flask import Flask, request, jsonify, render_template, session, redirect, url_for
 from flask_cors import CORS
 from models import db, Search, Lead
-from sources import find_leads
+from sources import find_leads, resolve_type, type_groups, type_label, market_sizing, find_categories, LEAD_TYPES
 from db_service import (
     init_db, save_results, get_results, list_all_searches,
     delete_search, get_statistics, search_by_filters, get_leads_by_search
 )
-from geocoding import get_coordinates
+from geocoding import get_coordinates, zip_place
 import os
 from dotenv import load_dotenv
 from functools import wraps
 import hmac
+import re
+import threading
+import time
+import uuid
 
 load_dotenv()
 
@@ -36,6 +40,19 @@ with app.app_context():
 
 # Admin password
 ADMIN_PASSWORD = os.environ['ADMIN_PASSWORD']
+
+# Only one memory-heavy lookup at a time (the free host has 512MB)
+search_lock = threading.Lock()
+sweep_jobs = {}
+PRESET_SETS = {
+    'housing_all': ['apartments', 'housing_companies', 'trailers'],
+    'partners_all': [k for k, v in LEAD_TYPES.items() if v['group'] == 'Referral partners'],
+}
+
+
+@app.context_processor
+def inject_lead_types():
+    return {'lead_type_groups': type_groups()}
 
 def login_required(f):
     """Decorator to check if admin is logged in"""
@@ -124,28 +141,40 @@ def search_leads():
 
         print(f"[*] Searching for {property_type} near {location} ({lat}, {lon}) within {radius} miles")
 
-        if property_type not in ('apartments', 'trailers', 'housing_companies'):
-            return jsonify({'error': 'Invalid property type'}), 400
-
+        type_key = resolve_type(property_type, data.get('custom_category'))
+        if not type_key:
+            return jsonify({'error': 'Pick a business type, or enter a category name using letters, numbers and underscores.'}), 400
         try:
-            warnings = []
-            leads = find_leads(property_type, lat, lon, radius, limit, warnings)
+            radius = max(1, min(int(radius), 50))
+            limit = max(1, min(int(limit), 200))
+        except (TypeError, ValueError):
+            return jsonify({'error': 'Radius and limit must be numbers.'}), 400
+
+        if not search_lock.acquire(blocking=False):
+            return jsonify({'error': 'Another search is running. Try again in a minute.'}), 429
+        warnings = []
+        try:
+            leads = find_leads(type_key, lat, lon, radius, limit, warnings)
         except RuntimeError as exc:
             return jsonify({'error': f'Business data source unavailable, try again shortly. ({exc})'}), 503
+        finally:
+            search_lock.release()
+        if not leads and type_key.startswith('custom:'):
+            warnings.append(f"No matches for category '{type_key[7:]}'. Use Find category to see valid names near this ZIP.")
 
         # Apply price filters if specified
         if min_price or max_price:
             leads = [l for l in leads if apply_price_filter(l, min_price, max_price)]
 
         # Save to database
-        search_id = save_results(location, lat, lon, radius, property_type, leads)
+        search_id = save_results(location, lat, lon, radius, type_key, leads)
 
         return jsonify({
             'success': True,
             'search_id': search_id,
             'location': location,
             'radius': radius,
-            'property_type': property_type,
+            'property_type': type_key,
             'lead_count': len(leads),
             'leads': leads,
             'warnings': warnings
@@ -198,7 +227,7 @@ def export_results(search_id):
 
         # Create CSV
         output = StringIO()
-        fieldnames = ['name', 'email', 'phone', 'address', 'type', 'price', 'email_validated']
+        fieldnames = ['name', 'email', 'phone', 'address', 'type', 'website', 'email_validated']
         writer = csv.DictWriter(output, fieldnames=fieldnames)
         writer.writeheader()
 
@@ -209,7 +238,7 @@ def export_results(search_id):
                 'phone': lead.get('phone', ''),
                 'address': lead.get('address', ''),
                 'type': lead.get('type', ''),
-                'price': lead.get('price', ''),
+                'website': lead.get('url', ''),
                 'email_validated': lead.get('email_validated', False)
             })
 
@@ -295,6 +324,147 @@ def admin_get_leads(search_id):
         }), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+# ============= MARKET SIZING, CATEGORY FINDER, TERRITORY SWEEP =============
+
+@app.route('/admin/market')
+@login_required
+def admin_market_page():
+    return render_template('market.html')
+
+
+@app.route('/admin/sweep')
+@login_required
+def admin_sweep_page():
+    return render_template('sweep.html')
+
+
+def _locate(location):
+    lat, lon = get_coordinates(location or '')
+    if not lat:
+        return None, None, (jsonify({'error': 'We could not find that ZIP code or place. Try a 5-digit US ZIP or "City, ST".'}), 400)
+    return lat, lon, None
+
+
+@app.route('/api/categories', methods=['GET'])
+@login_required
+def api_categories():
+    """Valid Overture category names near a ZIP that contain the search text."""
+    q = re.sub(r'[^a-z0-9_ ]', '', (request.args.get('q') or '').lower()).strip().replace(' ', '_')
+    if len(q) < 3:
+        return jsonify({'error': 'Type at least 3 letters.'}), 400
+    lat, lon, err = _locate(request.args.get('location') or '46204')
+    if err:
+        return err
+    if not search_lock.acquire(blocking=False):
+        return jsonify({'error': 'Another search is running. Try again in a minute.'}), 429
+    try:
+        return jsonify({'categories': find_categories(lat, lon, q)}), 200
+    except RuntimeError as exc:
+        return jsonify({'error': str(exc)}), 503
+    finally:
+        search_lock.release()
+
+
+@app.route('/api/market', methods=['POST'])
+@login_required
+def api_market():
+    """Rank ZIP codes around a location by how many target businesses they hold, plus competitor counts."""
+    data = request.json or {}
+    lat, lon, err = _locate(data.get('location'))
+    if err:
+        return err
+    choice = data.get('property_type', 'housing_all')
+    types = PRESET_SETS.get(choice) or [resolve_type(choice, data.get('custom_category'))]
+    if not types or None in types:
+        return jsonify({'error': 'Pick a business type, or enter a valid category name.'}), 400
+    try:
+        radius = max(1, min(int(data.get('radius', 15)), 50))
+    except (TypeError, ValueError):
+        return jsonify({'error': 'Radius must be a number.'}), 400
+    if not search_lock.acquire(blocking=False):
+        return jsonify({'error': 'Another search is running. Try again in a minute.'}), 429
+    try:
+        rows = market_sizing(lat, lon, radius, types, zip_place)
+        competitors = {r['zip']: r['total'] for r in market_sizing(lat, lon, radius, ['competitors'], zip_place)}
+    except RuntimeError as exc:
+        return jsonify({'error': str(exc)}), 503
+    finally:
+        search_lock.release()
+    for r in rows:
+        r['competitors'] = competitors.get(r['zip'], 0)
+        r['whitespace'] = round(r['total'] / (r['competitors'] + 1), 1)
+        r['by_type'] = {type_label(k): v for k, v in r['by_type'].items()}
+    return jsonify({'location': data.get('location'), 'radius': radius, 'rows': rows}), 200
+
+
+def _run_sweep(job_id, zips, radius, type_key, per_zip_limit):
+    job = sweep_jobs[job_id]
+    merged, seen, first = [], set(), None
+    try:
+        for i, z in enumerate(zips):
+            job.update(current=z, done=i)
+            lat, lon = get_coordinates(z)
+            first = first or (lat, lon)
+            with search_lock:
+                try:
+                    leads = find_leads(type_key, lat, lon, radius, per_zip_limit, [])
+                except RuntimeError as exc:
+                    job['errors'].append(f'{z}: {exc}')
+                    continue
+            for lead in leads:
+                key = (lead.get('email') or '').lower()
+                if key and key not in seen:
+                    seen.add(key)
+                    lead['zip'] = z
+                    merged.append(lead)
+            job['lead_count'] = len(merged)
+        with app.app_context():
+            job['search_id'] = save_results('Sweep: ' + ', '.join(zips), first[0], first[1], radius, type_key, merged)
+        job.update(status='done', done=len(zips), current='', leads=merged)
+    except Exception as exc:
+        job.update(status='error', error=str(exc))
+
+
+@app.route('/api/sweep', methods=['POST'])
+@login_required
+def api_sweep_start():
+    data = request.json or {}
+    raw = data.get('zips') or ''
+    zips = list(dict.fromkeys(re.findall(r'\b\d{5}\b', raw if isinstance(raw, str) else ' '.join(map(str, raw)))))
+    if not zips:
+        return jsonify({'error': 'Enter at least one 5-digit ZIP code.'}), 400
+    if len(zips) > 8:
+        return jsonify({'error': 'Up to 8 ZIP codes per sweep.'}), 400
+    unknown = [z for z in zips if not get_coordinates(z)[0]]
+    if unknown:
+        return jsonify({'error': 'Unknown ZIP code(s): ' + ', '.join(unknown)}), 400
+    type_key = resolve_type(data.get('property_type'), data.get('custom_category'))
+    if not type_key:
+        return jsonify({'error': 'Pick a business type, or enter a valid category name.'}), 400
+    try:
+        radius = max(1, min(int(data.get('radius', 10)), 50))
+        per_zip = max(5, min(int(data.get('limit', 25)), 100))
+    except (TypeError, ValueError):
+        return jsonify({'error': 'Radius and limit must be numbers.'}), 400
+    if any(j['status'] == 'running' for j in sweep_jobs.values()):
+        return jsonify({'error': 'A sweep is already running. Wait for it to finish.'}), 409
+    for old in sorted(sweep_jobs, key=lambda k: sweep_jobs[k]['started'])[:-9]:
+        sweep_jobs.pop(old, None)
+    job_id = uuid.uuid4().hex[:10]
+    sweep_jobs[job_id] = {'status': 'running', 'total': len(zips), 'done': 0, 'current': zips[0], 'lead_count': 0,
+                          'errors': [], 'started': time.time(), 'type': type_key, 'zips': zips}
+    threading.Thread(target=_run_sweep, args=(job_id, zips, radius, type_key, per_zip), daemon=True).start()
+    return jsonify({'job_id': job_id, 'total': len(zips)}), 202
+
+
+@app.route('/api/sweep/<job_id>', methods=['GET'])
+@login_required
+def api_sweep_status(job_id):
+    job = sweep_jobs.get(job_id)
+    if not job:
+        return jsonify({'error': 'Sweep not found (the server may have restarted).'}), 404
+    return jsonify({k: v for k, v in job.items() if k != 'started'}), 200
 
 # ============= UTILITY ROUTES =============
 

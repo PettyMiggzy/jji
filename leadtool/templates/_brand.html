@@ -16,7 +16,7 @@ a{color:var(--ember);text-decoration:none}a:hover{text-decoration:underline}
 .brand img{width:40px;height:40px;border-radius:10px}
 .brand-name{font-family:Sora,sans-serif;font-weight:800;font-size:1.1rem;letter-spacing:-.02em}
 .brand-name b{color:var(--ember)}.brand-name small{color:rgba(244,241,234,.5);font-size:.7rem;font-weight:600;margin-left:6px}
-.header-actions{display:flex;gap:12px;align-items:center}
+.header-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
 .admin-badge{display:inline-block;border:1px solid var(--line);color:var(--muted);padding:4px 12px;border-radius:999px;font-size:.75rem;font-weight:600}
 .logout-btn{color:var(--bone);border:1px solid var(--line);padding:8px 16px;border-radius:999px;font-weight:600;font-size:.85rem;text-decoration:none!important}
 .logout-btn:hover{border-color:var(--ember);color:var(--ember)}
@@ -32,8 +32,8 @@ a{color:var(--ember);text-decoration:none}a:hover{text-decoration:underline}
 /* forms */
 .form-group{margin-bottom:16px}
 .form-group label{display:block;margin-bottom:6px;color:var(--muted);font-weight:500;font-size:.85rem}
-input,select,.search-input{width:100%;background:var(--ink);border:1px solid var(--line);color:var(--bone);border-radius:12px;padding:12px 14px;font:inherit;font-size:.95rem}
-input:focus,select:focus{outline:none;border-color:var(--ember)}
+input,select,textarea,.search-input{width:100%;background:var(--ink);border:1px solid var(--line);color:var(--bone);border-radius:12px;padding:12px 14px;font:inherit;font-size:.95rem}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ember)}
 input::placeholder{color:rgba(244,241,234,.35)}
 
 /* buttons */

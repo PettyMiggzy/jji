@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Market Sizing - Junk Junkies Lead Tool</title>
+    {% include '_brand.html' %}
+</head>
+<body>
+    <div class="topbar"><div class="topbar-inner">
+        <a class="brand" href="https://junkjunkiesindiana.com/"><img src="https://junkjunkiesindiana.com/assets/logo-icon.png" alt="" onerror="this.style.display='none'"><span class="brand-name">JUNK<b>JUNKIES</b><small>LEAD TOOL</small></span></a>
+        <div class="header-actions">{% include '_nav.html' %}</div>
+    </div></div>
+    <div class="container">
+        <div class="page-title"><h1>Market sizing</h1><p>Rank the ZIP codes around any location by how many target businesses they hold and how many competitors already work there.</p></div>
+        <div class="main-content">
+            <div class="card">
+                <h2>Size a market</h2>
+                <form id="marketForm">
+                    <div class="form-group"><label for="location">Center ZIP code <span style="opacity:.6;font-weight:400">(or city, state)</span></label>
+                        <input type="text" id="location" placeholder="e.g., 77379 or Tampa, FL" required></div>
+                    <div class="form-group"><label for="radius">Radius (miles, 1-50)</label>
+                        <input type="number" id="radius" min="1" max="50" value="15" required>
+                        <div class="controls" style="margin:10px 0 0">
+                            <button type="button" class="filter-btn" onclick="setRadius(10)">10 mi</button>
+                            <button type="button" class="filter-btn" onclick="setRadius(25)">25 mi</button>
+                            <button type="button" class="filter-btn" onclick="setRadius(50)">50 mi</button>
+                        </div></div>
+                    <div class="form-group"><label for="propertyType">Business type</label>
+                        {% set presets = true %}{% include '_type_picker.html' %}</div>
+                    <button type="submit" class="btn" id="goBtn">Rank ZIP codes</button>
+                </form>
+                <div class="loading" id="loading"><div class="spinner"></div><p>Counting businesses (about 30 seconds)...</p></div>
+                <div class="error" id="errorMsg"></div>
+            </div>
+            <div class="card">
+                <h2>How to read it</h2>
+                <div class="note">
+                    <p><strong>Businesses</strong> = listings of your chosen type in that ZIP (open Overture Maps data).</p>
+                    <p><strong>Competitors</strong> = junk removal, dumpster rental and junkyard listings in the same ZIP.</p>
+                    <p><strong>Whitespace</strong> = businesses divided by (competitors + 1). Higher means more potential customers per competitor.</p>
+                    <p style="margin-top:14px">Use it to choose where to advertise or hire first, then run a territory sweep on the top ZIPs. Listings can be months old, so treat counts as a guide, not a census.</p>
+                </div>
+            </div>
+        </div>
+        <div class="results-container" id="results" style="display:none">
+            <div class="results-header"><div><h2>ZIP ranking</h2><p class="note" id="summary" style="margin-top:4px"></p></div>
+                <div class="controls" style="margin:0">
+                    <button class="filter-btn active" id="sortTotal" type="button">Most businesses</button>
+                    <button class="filter-btn" id="sortWhite" type="button">Best whitespace</button>
+                    <button class="filter-btn" id="toSweep" type="button">Sweep top 5 ZIPs</button>
+                </div></div>
+            <table><thead><tr><th>#</th><th>ZIP</th><th>Place</th><th>Businesses</th><th>With website</th><th>Listed email</th><th>Competitors</th><th>Whitespace</th><th>Breakdown</th></tr></thead>
+                <tbody id="rows"></tbody></table>
+        </div>
+    </div>
+    <script>
+        let rows = [];
+        const esc = t => String(t == null ? '' : t).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+        function setRadius(m) { document.getElementById('radius').value = m; }
+        function render(sortKey) {
+            const sorted = [...rows].sort((a, b) => b[sortKey] - a[sortKey] || b.total - a.total);
+            document.getElementById('rows').innerHTML = sorted.map((r, i) => `<tr><td>${i + 1}</td><td><strong>${esc(r.zip)}</strong></td><td>${esc(r.place)}</td>
+                <td><strong>${r.total}</strong></td><td>${r.websites}</td><td>${r.emails}</td><td>${r.competitors}</td><td>${r.whitespace}</td>
+                <td>${Object.entries(r.by_type).map(([k, v]) => `<span class="chip">${esc(k)}: ${v}</span>`).join(' ')}</td></tr>`).join('');
+            window.currentOrder = sorted.map(r => r.zip);
+        }
+        document.getElementById('sortTotal').onclick = e => { document.getElementById('sortWhite').classList.remove('active'); e.target.classList.add('active'); render('total'); };
+        document.getElementById('sortWhite').onclick = e => { document.getElementById('sortTotal').classList.remove('active'); e.target.classList.add('active'); render('whitespace'); };
+        document.getElementById('toSweep').onclick = () => {
+            try { sessionStorage.setItem('sweepZips', (window.currentOrder || []).slice(0, 5).join(', ')); } catch (e) {}
+            window.location.href = '/admin/sweep/';
+        };
+        document.getElementById('marketForm').addEventListener('submit', async e => {
+            e.preventDefault();
+            const load = document.getElementById('loading'), err = document.getElementById('errorMsg'), btn = document.getElementById('goBtn');
+            load.style.display = 'block'; err.style.display = 'none'; btn.disabled = true;
+            try {
+                const resp = await fetch('/api/market', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ location: document.getElementById('location').value, radius: parseInt(document.getElementById('radius').value), ...typePayload() }) });
+                if (resp.status === 401) { window.location.href = '/admin/login/'; return; }
+                const d = await resp.json();
+                if (!resp.ok) throw new Error(d.error || 'Request failed');
+                rows = d.rows;
+                document.getElementById('summary').textContent = `${rows.length} ZIP codes within ${d.radius} miles of ${d.location}`;
+                document.getElementById('sortTotal').click();
+                document.getElementById('results').style.display = 'block';
+            } catch (ex) { err.textContent = ex.message; err.style.display = 'block'; }
+            finally { load.style.display = 'none'; btn.disabled = false; }
+        });
+    </script>
+</body>
+</html>

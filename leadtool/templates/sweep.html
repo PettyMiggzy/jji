@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Territory Sweep - Junk Junkies Lead Tool</title>
+    {% include '_brand.html' %}
+</head>
+<body>
+    <div class="topbar"><div class="topbar-inner">
+        <a class="brand" href="https://junkjunkiesindiana.com/"><img src="https://junkjunkiesindiana.com/assets/logo-icon.png" alt="" onerror="this.style.display='none'"><span class="brand-name">JUNK<b>JUNKIES</b><small>LEAD TOOL</small></span></a>
+        <div class="header-actions">{% include '_nav.html' %}</div>
+    </div></div>
+    <div class="container">
+        <div class="page-title"><h1>Territory sweep</h1><p>Paste several ZIP codes and get one combined, de-duplicated lead list.</p></div>
+        <div class="main-content">
+            <div class="card">
+                <h2>Run a sweep</h2>
+                <form id="sweepForm">
+                    <div class="form-group"><label for="zips">ZIP codes <span style="opacity:.6;font-weight:400">(up to 8, any separator)</span></label>
+                        <textarea id="zips" rows="3" placeholder="77379, 77386, 77388" required></textarea></div>
+                    <div class="form-group"><label for="radius">Radius around each ZIP (miles)</label>
+                        <input type="number" id="radius" min="1" max="50" value="5" required>
+                        <div class="controls" style="margin:10px 0 0">
+                            <button type="button" class="filter-btn" onclick="setRadius(3)">3 mi</button>
+                            <button type="button" class="filter-btn" onclick="setRadius(5)">5 mi</button>
+                            <button type="button" class="filter-btn" onclick="setRadius(10)">10 mi</button>
+                        </div></div>
+                    <div class="form-group"><label for="propertyType">Business type</label>{% include '_type_picker.html' %}</div>
+                    <div class="form-group"><label for="limit">Leads per ZIP</label><input type="number" id="limit" min="5" max="100" value="25" required></div>
+                    <button type="submit" class="btn" id="goBtn">Start sweep</button>
+                </form>
+                <div class="error" id="errorMsg"></div>
+            </div>
+            <div class="card">
+                <h2>Progress</h2>
+                <div class="note" id="status">No sweep running. Each ZIP takes about 30 to 45 seconds, so 5 ZIPs take a few minutes. You can leave this page open while it runs.</div>
+                <div id="bar" style="display:none;margin-top:14px;height:10px;border-radius:999px;background:var(--ink);border:1px solid var(--line);overflow:hidden"><div id="barFill" style="height:100%;width:0;background:var(--ember);transition:width .4s"></div></div>
+            </div>
+        </div>
+        <div class="results-container" id="results" style="display:none">
+            <div class="results-header"><div><h2>Combined leads</h2><p class="note" id="summary" style="margin-top:4px"></p></div>
+                <a class="btn export-btn" id="exportBtn" href="#" style="text-decoration:none;text-align:center">Export CSV</a></div>
+            <table><thead><tr><th>Business</th><th>Email</th><th>Phone</th><th>Address</th><th>ZIP</th></tr></thead><tbody id="rows"></tbody></table>
+        </div>
+    </div>
+    <script>
+        const esc = t => String(t == null ? '' : t).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+        function setRadius(m) { document.getElementById('radius').value = m; }
+        try { const z = sessionStorage.getItem('sweepZips'); if (z) { document.getElementById('zips').value = z; sessionStorage.removeItem('sweepZips'); } } catch (e) {}
+        let timer = null;
+        function fail(msg) { const e = document.getElementById('errorMsg'); e.textContent = msg; e.style.display = 'block'; document.getElementById('goBtn').disabled = false; }
+        async function poll(id) {
+            try {
+                const resp = await fetch('/api/sweep/' + id);
+                if (resp.status === 401) { window.location.href = '/admin/login/'; return; }
+                const j = await resp.json();
+                if (!resp.ok) { fail(j.error || 'Lost the sweep'); return; }
+                const pct = Math.round(100 * j.done / j.total);
+                document.getElementById('barFill').style.width = (j.status === 'done' ? 100 : pct) + '%';
+                document.getElementById('status').textContent = j.status === 'running'
+                    ? `Working on ${j.current} (${j.done} of ${j.total} ZIPs done). ${j.lead_count} unique leads so far.` : '';
+                if (j.status === 'running') { timer = setTimeout(() => poll(id), 3000); return; }
+                document.getElementById('goBtn').disabled = false;
+                if (j.status === 'error') { fail(j.error || 'Sweep failed'); return; }
+                document.getElementById('status').textContent = `Done: ${j.lead_count} unique leads from ${j.total} ZIP codes.` + (j.errors.length ? ' Problems: ' + j.errors.join(' | ') : '');
+                document.getElementById('summary').textContent = `${j.lead_count} leads, de-duplicated by email`;
+                document.getElementById('exportBtn').href = '/api/export/' + j.search_id;
+                document.getElementById('rows').innerHTML = (j.leads || []).map(l => `<tr><td><strong>${esc(l.name)}</strong></td>
+                    <td><a href="mailto:${esc(l.email)}">${esc(l.email)}</a></td><td>${esc(l.phone || '')}</td><td>${esc(l.address || '')}</td><td>${esc(l.zip)}</td></tr>`).join('');
+                document.getElementById('results').style.display = 'block';
+            } catch (e) { timer = setTimeout(() => poll(id), 5000); }
+        }
+        document.getElementById('sweepForm').addEventListener('submit', async e => {
+            e.preventDefault();
+            document.getElementById('errorMsg').style.display = 'none'; document.getElementById('results').style.display = 'none';
+            document.getElementById('goBtn').disabled = true; document.getElementById('bar').style.display = 'block'; document.getElementById('barFill').style.width = '2%';
+            clearTimeout(timer);
+            try {
+                const resp = await fetch('/api/sweep', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ zips: document.getElementById('zips').value, radius: parseInt(document.getElementById('radius').value),
+                        limit: parseInt(document.getElementById('limit').value), ...typePayload() }) });
+                if (resp.status === 401) { window.location.href = '/admin/login/'; return; }
+                const d = await resp.json();
+                if (!resp.ok) { fail(d.error || 'Could not start'); document.getElementById('bar').style.display = 'none'; return; }
+                document.getElementById('status').textContent = 'Started...';
+                poll(d.job_id);
+            } catch (ex) { fail('Could not reach the server'); }
+        });
+    </script>
+</body>
+</html>

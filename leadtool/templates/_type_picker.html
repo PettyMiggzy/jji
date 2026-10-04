@@ -1,0 +1,43 @@
+<select id="propertyType" name="propertyType" required>
+    {% if presets %}<optgroup label="Combined">
+        <option value="housing_all">All housing (apartments + property managers + trailer parks)</option>
+        <option value="partners_all">All referral partners</option>
+    </optgroup>{% endif %}
+    {% for group, items in lead_type_groups %}
+    <optgroup label="{{ group }}">
+        {% for key, label in items %}<option value="{{ key }}">{{ label }}</option>{% endfor %}
+    </optgroup>
+    {% endfor %}
+    <optgroup label="Anything else"><option value="custom">Other category (type a name)...</option></optgroup>
+</select>
+<div id="customRow" style="display:none;margin-top:10px">
+    <input id="customCategory" placeholder="e.g. roofing, plumbing, dentist" autocomplete="off">
+    <div class="controls" style="margin:8px 0 0"><button type="button" class="filter-btn" onclick="findCategories()">Find category names</button></div>
+    <div id="catResults" class="note" style="margin-top:8px"></div>
+</div>
+<script>
+(function () {
+    var sel = document.getElementById('propertyType'), row = document.getElementById('customRow');
+    sel.addEventListener('change', function () { row.style.display = sel.value === 'custom' ? 'block' : 'none'; });
+    window.typePayload = function () {
+        return sel.value === 'custom' ? { property_type: 'custom', custom_category: document.getElementById('customCategory').value } : { property_type: sel.value };
+    };
+    window.findCategories = async function () {
+        var q = document.getElementById('customCategory').value, box = document.getElementById('catResults');
+        var loc = (document.getElementById('location') || {}).value || '';
+        var zbox = document.getElementById('zips');
+        if (!loc && zbox) { var zm = zbox.value.match(/\d{5}/); loc = zm ? zm[0] : ''; }
+        box.textContent = 'Looking...';
+        try {
+            var r = await fetch('/api/categories?q=' + encodeURIComponent(q) + '&location=' + encodeURIComponent(loc));
+            var d = await r.json();
+            if (!r.ok) { box.textContent = d.error || 'Lookup failed'; return; }
+            if (!d.categories.length) { box.textContent = 'No categories contain that text near this ZIP.'; return; }
+            box.innerHTML = d.categories.map(function (c) {
+                return '<button type="button" class="filter-btn" style="margin:0 6px 6px 0" data-cat="' + c.category + '">' + c.category + ' (' + c.places + ')</button>';
+            }).join('');
+            box.querySelectorAll('button').forEach(function (b) { b.onclick = function () { document.getElementById('customCategory').value = b.dataset.cat; }; });
+        } catch (e) { box.textContent = 'Lookup failed'; }
+    };
+})();
+</script>

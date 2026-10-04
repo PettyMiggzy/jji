@@ -17,11 +17,12 @@ PLACE_RE = re.compile(r"^\s*(.+?)\s*,?\s+([A-Za-z]{2})\s*$")
 ZIP_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "geo", "us_zips.csv")
 _zips = None
 _places = None
+_zip_names = {}
 
 
 def _load_tables():
     """Load the bundled US ZIP table (GeoNames postal codes, CC BY 4.0) once per process."""
-    global _zips, _places
+    global _zips, _places, _zip_names
     if _zips is not None:
         return
     _zips, grouped = {}, {}
@@ -29,8 +30,15 @@ def _load_tables():
         for row in csv.DictReader(f):
             lat, lon = float(row["lat"]), float(row["lon"])
             _zips[row["zip"]] = (lat, lon)
+            _zip_names[row["zip"]] = f'{row["place"]}, {row["state"]}'
             grouped.setdefault((_norm(row["place"]), row["state"].upper()), []).append((lat, lon))
     _places = {k: (sum(p[0] for p in v) / len(v), sum(p[1] for p in v) / len(v)) for k, v in grouped.items()}
+
+
+def zip_place(zip5):
+    """'Dallas, TX' for a ZIP, or '' if unknown."""
+    _load_tables()
+    return _zip_names.get(zip5, "")
 
 
 def _norm(name):

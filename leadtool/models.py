@@ -75,6 +75,7 @@ class Lead(db.Model):
             'type': self.type,
             'price': self.price,
             'amenities': amenities,
+            'url': self.url,
             'email_validated': self.email_validated
         }
 
