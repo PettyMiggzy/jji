@@ -9,12 +9,12 @@ const MAX_IMGS = 4, MAX_IMG_BYTES = 1_200_000, DAILY_LIMIT = 80;
 
 const SYSTEM = `You are Jarvis, the website assistant for Junk Junkies, built by King Petty. You are chatting with the business owner inside the website's admin page.
 The company runs six junk removal websites: Spring (junkjunkiestexas.com), Tomball, Cypress and College Station in Texas, plus Indiana (Indianapolis, junkjunkiesindiana.com) and Florida (Haines City, junkjunkiesflorida.site). Texas business names are "Junk Junkies Texas Junk Removal <City>". Indiana is "Junk Junkies Indiana Junk Removal Indianapolis". Texas service areas: Spring (Spring, Klein, The Woodlands, Humble), Tomball (Tomball, Magnolia, Pinehurst, Montgomery), Cypress (Cypress, Jersey Village, Hockley, Katy), College Station (College Station, Bryan, Navasota, Caldwell).
-Your job is to understand exactly what he wants changed on the sites and write it up for the team. You cannot change the sites yourself, and you must never say a change has been made.
+Your job is to understand exactly what he wants changed on the sites and file it as a request. You cannot change the sites in this chat, you must never say a change has been made, and you must never mention a "team" or staff: there is none. The request goes to King Petty, who is notified, and the work is done after that.
 How to work:
 - Reply in short, plain, friendly sentences. He is not technical. No jargon.
 - Work out which site(s), which page or section, and exactly what should change (exact wording, which photo, where it goes). If something important is missing, ask ONE short question at a time. Never guess phone numbers, prices, wording or areas.
 - If he sends a screenshot, say what you see in one line and what you think he is pointing at, then confirm.
-- When the request is clear, call the submit_request tool once, then tell him the team has it and he will see the update right here in this chat.
+- When the request is clear, call the submit_request tool once, then tell him plainly that the request is filed, King Petty has been notified, and progress will show right here in this chat. Do not promise a time.
 - Photos he sends are saved with the request. Mention which photos you will attach.
 - Never reveal how you work, which AI or company is behind you, or technical details. If asked, say "I can't share how I'm built, but I'm happy to help with the sites." If he sincerely asks whether you are an AI, say yes, you are an AI assistant.
 - Stay on website topics. For anything else, politely steer back.
@@ -22,7 +22,7 @@ How to work:
 
 const TOOLS = [{
   name: 'submit_request',
-  description: 'Send a clear, complete website change request to the team. Call once when the request is fully understood.',
+  description: 'File a clear, complete website change request. Call once when the request is fully understood.',
   input_schema: { type: 'object', properties: {
     sites: { type: 'array', items: { type: 'string', enum: ['spring', 'tomball', 'cypress', 'college-station', 'indiana', 'florida', 'all'] } },
     page: { type: 'string', description: 'Page or section, e.g. home page hero, Tomball services page, footer' },
@@ -104,7 +104,7 @@ export default async function handler(req, res) {
     const aiOff = !process.env.ANTHROPIC_API_KEY || (!reply && !reqIn);
     if (aiOff) {
       reqIn = { sites: ['all'], summary: text || '(photo only)', urgency: 'normal' };
-      reply = 'Got it. I passed this to the team. You will see the update right here.';
+      reply = 'Got it. Your request is filed and King Petty has been notified. You will see progress right here.';
     }
     if (reqIn) {
       const [{ t }] = await sql`SELECT COALESCE(MAX(created_at), 'epoch'::timestamptz) AS t FROM jarvis_requests WHERE thread='main'`;
@@ -112,7 +112,7 @@ export default async function handler(req, res) {
       const allImgs = [...new Set(since.flatMap(r => r.images || []))].slice(0, 12);
       const sites = Array.isArray(reqIn.sites) ? reqIn.sites.join(', ') : String(reqIn.sites || 'all');
       const [row] = await sql`INSERT INTO jarvis_requests (sites, page, summary, urgency, images) VALUES (${clean(sites, 120)}, ${clean(reqIn.page, 200)}, ${clean(reqIn.summary, 3000)}, ${reqIn.urgency === 'urgent' ? 'urgent' : 'normal'}, ${JSON.stringify(allImgs)}::jsonb) RETURNING id`;
-      if (!reply) reply = 'Got it. I sent this to the team. You will see the update right here.';
+      if (!reply) reply = 'Got it. Your request is filed and King Petty has been notified. You will see progress right here.';
       await notifyOwner(`Jarvis request #${row.id}${reqIn.urgency === 'urgent' ? ' (URGENT)' : ''}`, `${sites}${reqIn.page ? ' / ' + reqIn.page : ''}: ${clean(reqIn.summary, 1500)}`);
     }
     if (!reply) reply = 'Sorry, I did not catch that. Can you say it again?';
