@@ -64,11 +64,43 @@
   }
 
   // ---------- reviews
+
+  // rotating reel of reviews: one card on phones, three on wide screens, loops forever
+  function reviewReel(grid, cards) {
+    var n = cards.length, i = 0, per = 1, timer = null, slides, startX = null;
+    var track = document.createElement('div'), dots = document.createElement('div');
+    track.style.cssText = 'display:flex;transition:transform .7s ease;will-change:transform';
+    dots.className = 'flex justify-center gap-2 mt-5';
+    grid.className = ''; grid.style.overflow = 'hidden'; grid.innerHTML = '';
+    grid.appendChild(track);
+    var wrap = grid.parentNode; var old = wrap.querySelector('[data-dots]'); if (old) old.remove(); dots.setAttribute('data-dots', ''); grid.after(dots);
+    function perView() { return window.matchMedia('(min-width:768px)').matches ? Math.max(1, Math.min(3, n - 1)) : 1; }
+    function build() {
+      per = perView();
+      track.innerHTML = cards.concat(cards.slice(0, per)).map(function (c) { return '<div style="flex:0 0 ' + (100 / per) + '%;padding:0 8px;box-sizing:border-box">' + c + '</div>'; }).join('');
+      Array.prototype.forEach.call(track.querySelectorAll('blockquote'), function (b) { b.style.height = '100%'; });
+      dots.innerHTML = cards.map(function (_, k) { return '<button type="button" aria-label="Review ' + (k + 1) + '" data-k="' + k + '" style="width:9px;height:9px;border-radius:9999px;background:#F4F1EA;opacity:.3;border:0;padding:0"></button>'; }).join('');
+      go(i % n, false);
+    }
+    function mark() { Array.prototype.forEach.call(dots.children, function (d, k) { d.style.opacity = k === (i % n) ? '1' : '.3'; d.style.background = k === (i % n) ? '#14F500' : '#F4F1EA'; }); }
+    function go(k, anim) { i = k; track.style.transition = anim === false ? 'none' : ''; track.style.transform = 'translateX(-' + (k * 100 / per) + '%)'; mark(); }
+    function next() { go(i + 1); if (i >= n) setTimeout(function () { go(0, false); }, 720); }
+    function prev() { if (i <= 0) go(n - 1, false); else go(i - 1); }
+    function play() { stop(); if (n > 1 && !matchMedia('(prefers-reduced-motion: reduce)').matches) timer = setInterval(function () { if (!document.hidden) next(); }, 5500); }
+    function stop() { if (timer) { clearInterval(timer); timer = null; } }
+    if (n < 2) { build(); return; }
+    build(); play();
+    dots.onclick = function (e) { var k = e.target.getAttribute && e.target.getAttribute('data-k'); if (k != null) { go(Number(k)); play(); } };
+    grid.addEventListener('mouseenter', stop); grid.addEventListener('mouseleave', play);
+    grid.addEventListener('touchstart', function (e) { startX = e.touches[0].clientX; stop(); }, { passive: true });
+    grid.addEventListener('touchend', function (e) { if (startX != null) { var dx = e.changedTouches[0].clientX - startX; if (dx < -40) next(); else if (dx > 40) prev(); startX = null; } play(); });
+    var rt; window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(function () { if (perView() !== per) build(); }, 200); });
+  }
   function renderReviews(d) {
     var box = $('#reviewsLive'); if (!box || !d || !d.reviews || !d.reviews.length) return;
     var stars = function (n) { return '★★★★★'.slice(0, Math.round(n)); };
     box.querySelector('[data-head]').innerHTML = d.rating ? '<span class="text-ember">' + stars(d.rating) + '</span> ' + esc(d.rating.toFixed(1)) + ' on Google' + (d.count ? ' · ' + esc(d.count) + ' reviews' : '') : 'Reviews from Google';
-    box.querySelector('[data-grid]').innerHTML = d.reviews.slice(0, 6).map(function (r) { return '<blockquote class="rounded-3xl bg-ink border border-line p-6"><div class="text-ember mb-2">' + stars(r.rating) + '</div><p class="text-bone/80 mb-4">' + esc(r.text) + '</p><footer class="text-sm text-bone/50">— ' + esc(r.author) + (r.when ? ', ' + esc(r.when) : '') + '</footer></blockquote>'; }).join('');
+    reviewReel(box.querySelector('[data-grid]'), d.reviews.slice(0, 10).map(function (r) { return '<blockquote class="rounded-3xl bg-ink border border-line p-6"><div class="text-ember mb-2">' + stars(r.rating) + '</div><p class="text-bone/80 mb-4">' + esc(r.text) + '</p><footer class="text-sm text-bone/50">— ' + esc(r.author) + (r.when ? ', ' + esc(r.when) : '') + '</footer></blockquote>'; }));
     if (d.url) box.querySelector('[data-link]').href = d.url; else box.querySelector('[data-link]').remove();
     box.classList.remove('hidden');
     var st = $('#staticReviews'); if (st) st.remove();
