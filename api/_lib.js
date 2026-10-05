@@ -22,3 +22,13 @@ export function crewOk(req) {
   return d === 0;
 }
 export function clean(s, max) { return String(s ?? '').replace(/[<>]/g, '').trim().slice(0, max); }
+export function adminOk(req) {
+  const ap = process.env.ADMIN_PIN || '', got = String(req.headers['x-admin-pin'] || '');
+  if (!ap || got.length !== ap.length) return false;
+  let d = 0; for (let i = 0; i < ap.length; i++) d |= ap.charCodeAt(i) ^ got.charCodeAt(i);
+  return d === 0;
+}
+export async function ensureJarvis(sql) {
+  await sql`CREATE TABLE IF NOT EXISTS jarvis_messages (id SERIAL PRIMARY KEY, thread TEXT NOT NULL DEFAULT 'main', role TEXT NOT NULL, content TEXT NOT NULL DEFAULT '', images JSONB NOT NULL DEFAULT '[]', created_at TIMESTAMPTZ NOT NULL DEFAULT now())`;
+  await sql`CREATE TABLE IF NOT EXISTS jarvis_requests (id SERIAL PRIMARY KEY, thread TEXT NOT NULL DEFAULT 'main', sites TEXT, page TEXT, summary TEXT NOT NULL, urgency TEXT NOT NULL DEFAULT 'normal', images JSONB NOT NULL DEFAULT '[]', status TEXT NOT NULL DEFAULT 'new', reply TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT now(), updated_at TIMESTAMPTZ NOT NULL DEFAULT now())`;
+}

@@ -13,6 +13,76 @@
   function load() {
     api('GET').then(function (d) { try { sessionStorage.setItem('jjadmin', pin); } catch (e) {} render(d); }).catch(function (e) { login(e.message); });
   }
+
+  // ---------- Ask Jarvis chat
+  var chatTimer = null;
+  function jfetch(method, body) { return fetch('/api/jarvis', { method: method, headers: { 'Content-Type': 'application/json', 'x-admin-pin': pin }, body: body ? JSON.stringify(body) : undefined }).then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || 'Error'); return j; }); }); }
+  function shrink(file) {
+    return new Promise(function (resolve) {
+      var img = new Image(), url = URL.createObjectURL(file);
+      img.onload = function () {
+        var m = 1280, sc = Math.min(1, m / Math.max(img.width, img.height)), c = document.createElement('canvas');
+        c.width = Math.round(img.width * sc); c.height = Math.round(img.height * sc);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url);
+        var q = 0.72, out = c.toDataURL('image/jpeg', q);
+        while (out.length > 1500000 && q > 0.35) { q -= 0.1; out = c.toDataURL('image/jpeg', q); }
+        resolve(out);
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); resolve(null); };
+      img.src = url;
+    });
+  }
+  function mountChat(box) {
+    if (chatTimer) { clearInterval(chatTimer); chatTimer = null; }
+    var pending = [];
+    box.innerHTML = '<div class="rounded-3xl border border-ember/40 bg-slate2 p-4 sm:p-5">' +
+      '<div class="flex items-center justify-between gap-2 mb-3"><div><div class="display text-xl font-extrabold">Ask Jarvis</div><div class="text-xs text-bone/60">Tell Jarvis what to change on the sites. Send screenshots too.</div></div><div id="jReqs" class="text-xs text-bone/60 text-right"></div></div>' +
+      '<div id="jLog" class="h-[15rem] sm:h-[22rem] overflow-y-auto rounded-2xl bg-ink border border-line p-3 grid gap-2 content-start"></div>' +
+      '<div id="jPrev" class="flex gap-2 mt-2 flex-wrap"></div>' +
+      '<div class="flex gap-2 mt-3 items-end"><label class="shrink-0 cursor-pointer rounded-xl border border-line bg-ink px-3 py-3 text-lg" title="Attach photos">📎<input id="jFile" type="file" accept="image/*" multiple class="hidden"></label>' +
+      '<textarea id="jText" rows="2" maxlength="2000" placeholder="What do you want changed?" class="flex-1 bg-ink border border-line rounded-xl px-4 py-3 text-base resize-none"></textarea>' +
+      '<button id="jSend" class="shrink-0 rounded-full bg-ember hover:bg-emberDark text-ink font-bold px-5 py-3">Send</button></div>' +
+      '<p id="jErr" class="text-xs text-red-400 mt-2 min-h-[1rem]"></p></div>';
+    var log = box.querySelector('#jLog'), prev = box.querySelector('#jPrev'), err = box.querySelector('#jErr'), txt = box.querySelector('#jText'), send = box.querySelector('#jSend');
+    function bubble(m) {
+      var me = m.role === 'user', imgs = (m.images || []).map(function (u) { return '<a href="' + esc(u) + '" target="_blank" rel="noopener"><img src="' + esc(u) + '" alt="" class="w-20 h-20 object-cover rounded-lg"></a>'; }).join('');
+      return '<div class="flex ' + (me ? 'justify-end' : 'justify-start') + '"><div class="max-w-[85%] rounded-2xl px-3 py-2 text-sm ' + (me ? 'bg-ember text-ink' : 'bg-slate2 border border-line') + '">' +
+        (m.content ? '<div class="whitespace-pre-wrap">' + esc(m.content) + '</div>' : '') + (imgs ? '<div class="flex gap-1 flex-wrap mt-1">' + imgs + '</div>' : '') + '</div></div>';
+    }
+    var lastId = 0;
+    function refresh(force) {
+      jfetch('GET').then(function (d) {
+        var top = d.messages.length ? d.messages[d.messages.length - 1].id : 0;
+        if (force || top !== lastId) {
+          var atEnd = log.scrollTop + log.clientHeight >= log.scrollHeight - 40;
+          log.innerHTML = d.messages.length ? d.messages.map(bubble).join('') : '<p class="text-bone/50 text-sm">Hi, I am Jarvis. What would you like changed on the websites?</p>';
+          if (force || atEnd || top !== lastId) log.scrollTop = log.scrollHeight;
+          lastId = top;
+        }
+        var open = d.requests.filter(function (r) { return r.status !== 'done'; }).length;
+        box.querySelector('#jReqs').innerHTML = (open ? '<span class="text-ember font-semibold">' + open + ' in progress</span><br>' : '') + (d.requests[0] ? 'Latest: #' + d.requests[0].id + ' ' + esc(d.requests[0].status) : '');
+      }).catch(function (e) { err.textContent = e.message; });
+    }
+    box.querySelector('#jFile').onchange = function (e) {
+      var files = Array.prototype.slice.call(e.target.files || [], 0, 4 - pending.length);
+      Promise.all(files.map(shrink)).then(function (arr) {
+        arr.forEach(function (u) { if (u && pending.length < 4) pending.push(u); });
+        prev.innerHTML = pending.map(function (u) { return '<img src="' + u + '" alt="" class="w-14 h-14 object-cover rounded-lg border border-line">'; }).join('');
+      });
+      e.target.value = '';
+    };
+    function doSend() {
+      var t = txt.value.trim(); if (!t && !pending.length) return;
+      send.disabled = true; send.textContent = '…'; err.textContent = '';
+      jfetch('POST', { message: t, images: pending }).then(function () {
+        txt.value = ''; pending = []; prev.innerHTML = ''; refresh(true);
+      }).catch(function (e) { err.textContent = e.message; }).then(function () { send.disabled = false; send.textContent = 'Send'; });
+    }
+    send.onclick = doSend;
+    refresh(true);
+    chatTimer = setInterval(function () { if (!document.hidden) refresh(false); }, 8000);
+  }
+
   function render(d) {
     var by = {}; d.stats.forEach(function (s) { by[s.site] = s; });
     var sites = Object.keys(NAMES);
@@ -30,8 +100,9 @@
         '<button data-a="' + (j.hidden ? 'unhide' : 'hide') + '" data-id="' + j.id + '" class="text-xs rounded-full border border-line px-3 py-1.5">' + (j.hidden ? 'Show' : 'Hide') + '</button></div></div>';
     }).join('') || '<p class="text-bone/50">No jobs yet.</p>';
     var leadRows = (d.leads || []).map(function (l) { var nm = (NAMES[l.site] || {}).name || l.site; return '<div class="rounded-xl border border-line bg-slate2 p-3"><div class="flex flex-wrap items-center justify-between gap-2"><div class="font-semibold">' + esc(l.name) + ' <a class="text-ember text-sm font-normal" href="tel:' + esc(l.phone) + '">' + esc(l.phone) + '</a></div><div class="text-xs text-bone/50">' + esc(nm) + ' · ' + ago(l.created_at) + '</div></div><div class="text-sm text-bone/70">' + esc([l.service, l.city, l.zip].filter(Boolean).join(' · ')) + '</div>' + (l.message ? '<div class="text-sm text-bone/55 mt-1">' + esc(l.message) + '</div>' : '') + '</div>'; }).join('') || '<p class="text-bone/50">No quote requests saved yet.</p>';
-    root.innerHTML = '<div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">' + cards + '</div><h2 class="display text-xl font-extrabold mb-3">Latest quote requests (all sites)</h2><div class="grid gap-2 mb-10">' + leadRows + '</div><div class="flex items-center justify-between mb-3"><h2 class="display text-xl font-extrabold">Latest jobs (all sites)</h2><button id="rf" class="text-xs rounded-full border border-line px-3 py-1.5">Refresh</button></div><div class="grid gap-2">' + rows + '</div>' +
+    root.innerHTML = '<div id="jarvisBox" class="mb-10"></div><div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">' + cards + '</div><h2 class="display text-xl font-extrabold mb-3">Latest quote requests (all sites)</h2><div class="grid gap-2 mb-10">' + leadRows + '</div><div class="flex items-center justify-between mb-3"><h2 class="display text-xl font-extrabold">Latest jobs (all sites)</h2><button id="rf" class="text-xs rounded-full border border-line px-3 py-1.5">Refresh</button></div><div class="grid gap-2">' + rows + '</div>' +
       '<p class="mt-8 text-xs text-bone/40">Hiding a job removes it from the public map and gallery but keeps it here. Reviews feed: ' + (d.reviews ? 'connected on this site' : 'not set on this site') + '.</p>';
+    mountChat(document.getElementById('jarvisBox'));
     document.getElementById('rf').onclick = load;
     root.querySelectorAll('button[data-a]').forEach(function (b) { b.onclick = function () { b.disabled = true; api('POST', { action: b.dataset.a, id: Number(b.dataset.id) }).then(load).catch(function (e) { alert(e.message); b.disabled = false; }); }; });
   }
