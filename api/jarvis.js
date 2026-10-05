@@ -78,7 +78,8 @@ export default async function handler(req, res) {
         });
         while (messages.length && messages[0].role !== 'user') messages.shift();
         const client = new Anthropic();
-        const r = await client.messages.create({ model: MODEL, max_tokens: 1200, system: SYSTEM, tools: TOOLS, messages, output_config: { effort: 'low' } });
+        const r = await client.messages.create({ model: MODEL, max_tokens: 4000, system: SYSTEM, tools: TOOLS, messages, output_config: { effort: 'low' } });
+        console.log('jarvis ai result', JSON.stringify({ stop: r.stop_reason, blocks: (r.content || []).map(b => b.type), usage: r.usage, details: r.stop_details || null }));
         if (r.stop_reason !== 'refusal') {
           for (const blk of r.content) {
             if (blk.type === 'text') reply += blk.text;
