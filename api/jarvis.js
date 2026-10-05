@@ -77,7 +77,7 @@ export default async function handler(req, res) {
           return { role: m.role === 'user' ? 'user' : 'assistant', content: (m.content || '(photo)') + extra };
         });
         while (messages.length && messages[0].role !== 'user') messages.shift();
-        const client = new Anthropic();
+        const client = new Anthropic(process.env.ANTHROPIC_WORKSPACE_ID ? { defaultHeaders: { 'anthropic-workspace-id': process.env.ANTHROPIC_WORKSPACE_ID } } : {});
         const r = await client.messages.create({ model: MODEL, max_tokens: 4000, system: SYSTEM, tools: TOOLS, messages, output_config: { effort: 'low' } });
         console.log('jarvis ai result', JSON.stringify({ stop: r.stop_reason, blocks: (r.content || []).map(b => b.type), usage: r.usage, details: r.stop_details || null }));
         if (r.stop_reason !== 'refusal') {
