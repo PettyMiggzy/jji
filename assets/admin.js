@@ -38,7 +38,7 @@
     box.innerHTML = '<div class="rounded-3xl border border-ember/40 bg-slate2 p-4 sm:p-5">' +
       '<div class="flex items-center justify-between gap-2 mb-3"><div><div class="display text-xl font-extrabold">Ask Jarvis</div><div class="text-xs text-bone/60">Tell Jarvis what to change on the sites. Send screenshots too.</div></div><div id="jReqs" class="text-xs text-bone/60 text-right"></div></div>' +
       '<div id="jLog" class="h-[15rem] sm:h-[22rem] overflow-y-auto rounded-2xl bg-ink border border-line p-3 grid gap-2 content-start"></div>' +
-      '<div id="jPrev" class="flex gap-2 mt-2 flex-wrap"></div>' +
+      '<div id="jTrack" class="mt-3"></div><div id="jPrev" class="flex gap-2 mt-2 flex-wrap"></div>' +
       '<div class="flex gap-2 mt-3 items-end"><label class="shrink-0 cursor-pointer rounded-xl border border-line bg-ink px-3 py-3 text-lg" title="Attach photos">📎<input id="jFile" type="file" accept="image/*" multiple class="hidden"></label>' +
       '<textarea id="jText" rows="2" maxlength="2000" placeholder="What do you want changed?" class="flex-1 bg-ink border border-line rounded-xl px-4 py-3 text-base resize-none"></textarea>' +
       '<button id="jSend" class="shrink-0 rounded-full bg-ember hover:bg-emberDark text-ink font-bold px-5 py-3">Send</button></div>' +
@@ -59,6 +59,16 @@
           if (force || atEnd || top !== lastId) log.scrollTop = log.scrollHeight;
           lastId = top;
         }
+
+        var cur = d.requests.filter(function (r) { return r.status !== 'done'; })[0] || d.requests[0];
+        var tr = box.querySelector('#jTrack');
+        if (cur && (cur.status !== 'done' || (Date.now() - new Date(cur.updated_at)) < 86400000)) {
+          var steps = ['Received', 'Reviewing', 'Working on it', 'Done'], at = { 'new': 0, question: 1, working: 2, done: 3 }[cur.status]; if (at == null) at = 0;
+          tr.innerHTML = '<div class="text-xs text-bone/50 mb-1">Request #' + cur.id + (cur.status === 'question' ? ' · waiting on your answer' : '') + '</div><div class="flex items-center gap-1">' + steps.map(function (st, k) {
+            var on = k < at || cur.status === 'done', now = k === at && cur.status !== 'done';
+            return '<div class="flex-1"><div class="h-1.5 rounded-full ' + (on ? 'bg-ember' : (now ? 'bg-ember/40 animate-pulse' : 'bg-line')) + '"></div><div class="text-[10px] mt-1 ' + (on || now ? 'text-ember' : 'text-bone/40') + '">' + st + '</div></div>';
+          }).join('') + '</div>';
+        } else tr.innerHTML = '';
         var open = d.requests.filter(function (r) { return r.status !== 'done'; }).length;
         box.querySelector('#jReqs').innerHTML = (open ? '<span class="text-ember font-semibold">' + open + ' in progress</span><br>' : '') + (d.requests[0] ? 'Latest: #' + d.requests[0].id + ' ' + esc(d.requests[0].status) : '');
       }).catch(function (e) { err.textContent = e.message; });

@@ -45,12 +45,23 @@ export default async function handler(req, res) {
     await ensureJarvis(sql);
     if (req.method === 'GET') {
       const messages = (await sql`SELECT id, role, content, images, created_at FROM jarvis_messages WHERE thread='main' ORDER BY id DESC LIMIT 80`).reverse();
-      const requests = await sql`SELECT id, sites, page, summary, urgency, status, reply, created_at, updated_at FROM jarvis_requests WHERE thread='main' ORDER BY id DESC LIMIT 25`;
+      const requests = await sql`SELECT id, sites, page, summary, urgency, images, status, reply, created_at, updated_at FROM jarvis_requests WHERE thread='main' ORDER BY id DESC LIMIT 25`;
       return res.status(200).json({ messages, requests, ai: !!process.env.ANTHROPIC_API_KEY });
     }
     if (req.method !== 'POST') { res.setHeader('Allow', 'GET, POST'); return res.status(405).json({ error: 'Method not allowed' }); }
 
     const b = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
+    if (b.action === 'team') {   // the team marks progress and answers right in the chat
+      const id = Number(b.id), st = ['new', 'working', 'question', 'done'].includes(b.status) ? b.status : null;
+      if (!Number.isInteger(id) || !st) return res.status(400).json({ error: 'id and status required' });
+      await sql`UPDATE jarvis_requests SET status = ${st}, reply = ${clean(b.reply, 2000) || null}, updated_at = now() WHERE id = ${id}`;
+      if (clean(b.reply, 2000)) await sql`INSERT INTO jarvis_messages (role, content) VALUES ('assistant', ${clean(b.reply, 2000)})`;
+      return res.status(200).json({ ok: true });
+    }
+    if (b.action === 'reset' && b.confirm === 'wipe-chat') {   // clears test data
+      await sql`DELETE FROM jarvis_messages`; await sql`DELETE FROM jarvis_requests`;
+      return res.status(200).json({ ok: true, reset: true });
+    }
     const text = clean(b.message, 2000);
     const imgs = (Array.isArray(b.images) ? b.images : []).slice(0, MAX_IMGS).map(decodeImg).filter(Boolean);
     if (!text && !imgs.length) return res.status(400).json({ error: 'Type a message or attach a photo' });
