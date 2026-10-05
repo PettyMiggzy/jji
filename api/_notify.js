@@ -1,11 +1,5 @@
-// Tells the owner a new Jarvis request came in. Email through FormSubmit, optional text through Twilio. Both are best-effort.
+// Optional text alert (Twilio) for a new Jarvis request. The email notice is sent from the admin page in the browser, because FormSubmit blocks server requests.
 export async function notifyOwner(subject, text) {
-  const to = process.env.JARVIS_NOTIFY_EMAIL || 'bahmed3170@gmail.com';
-  try {
-    const fr = await fetch('https://formsubmit.co/ajax/' + to, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json', Origin: 'https://www.junkjunkiesindiana.com', Referer: 'https://www.junkjunkiesindiana.com/admin/' },
-      body: JSON.stringify({ _subject: subject, _template: 'table', _captcha: 'false', message: text }) });
-    console.log('notify email', fr.status, (await fr.text()).slice(0, 200));
-  } catch (e) { console.error('notify email failed'); }
   const { TWILIO_SID: sid, TWILIO_TOKEN: tok, TWILIO_FROM: from, NOTIFY_TO: ph } = process.env;
   if (sid && tok && from && ph) {
     await Promise.all(ph.split(',').map(n => n.trim()).filter(Boolean).map(n => fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {

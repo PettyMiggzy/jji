@@ -75,7 +75,7 @@ export default async function handler(req, res) {
     }
     await sql`INSERT INTO jarvis_messages (role, content, images) VALUES ('user', ${text}, ${JSON.stringify(urls)}::jsonb)`;
 
-    let reply = '', reqIn = null;
+    let reply = '', reqIn = null, filed = null;
     if (process.env.ANTHROPIC_API_KEY) {
       try {
         const hist = (await sql`SELECT role, content, images FROM jarvis_messages WHERE thread='main' ORDER BY id DESC LIMIT 16`).reverse();
@@ -113,10 +113,11 @@ export default async function handler(req, res) {
       const sites = Array.isArray(reqIn.sites) ? reqIn.sites.join(', ') : String(reqIn.sites || 'all');
       const [row] = await sql`INSERT INTO jarvis_requests (sites, page, summary, urgency, images) VALUES (${clean(sites, 120)}, ${clean(reqIn.page, 200)}, ${clean(reqIn.summary, 3000)}, ${reqIn.urgency === 'urgent' ? 'urgent' : 'normal'}, ${JSON.stringify(allImgs)}::jsonb) RETURNING id`;
       if (!reply) reply = 'Got it. Your request is filed and King Petty has been notified. You will see progress right here.';
-      await notifyOwner(`Jarvis request #${row.id}${reqIn.urgency === 'urgent' ? ' (URGENT)' : ''}`, `${sites}${reqIn.page ? ' / ' + reqIn.page : ''}: ${clean(reqIn.summary, 1500)}`);
+      filed = { id: row.id, urgent: reqIn.urgency === 'urgent', text: `${sites}${reqIn.page ? ' / ' + reqIn.page : ''}: ${clean(reqIn.summary, 1500)}` };
+      await notifyOwner(`Jarvis request #${row.id}${filed.urgent ? ' (URGENT)' : ''}`, filed.text);   // text alert if configured
     }
     if (!reply) reply = 'Sorry, I did not catch that. Can you say it again?';
     await sql`INSERT INTO jarvis_messages (role, content) VALUES ('assistant', ${reply.trim()})`;
-    return res.status(200).json({ ok: true });
+    return res.status(200).json({ ok: true, filed, notifyTo: process.env.JARVIS_NOTIFY_EMAIL || 'bahmed3170@gmail.com' });
   } catch (e) { console.error(e); return res.status(500).json({ error: 'Server error' }); }
 }

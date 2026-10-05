@@ -84,7 +84,8 @@
     function doSend() {
       var t = txt.value.trim(); if (!t && !pending.length) return;
       send.disabled = true; send.textContent = '…'; err.textContent = '';
-      jfetch('POST', { message: t, images: pending }).then(function () {
+      jfetch('POST', { message: t, images: pending }).then(function (res) {
+        if (res && res.filed) { try { fetch('https://formsubmit.co/ajax/' + res.notifyTo, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({ _subject: 'Jarvis request #' + res.filed.id + (res.filed.urgent ? ' (URGENT)' : ''), _template: 'table', _captcha: 'false', message: res.filed.text }) }); } catch (e) {} }
         txt.value = ''; pending = []; prev.innerHTML = ''; refresh(true);
       }).catch(function (e) { err.textContent = e.message; }).then(function () { send.disabled = false; send.textContent = 'Send'; });
     }
