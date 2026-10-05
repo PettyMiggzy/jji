@@ -97,72 +97,7 @@ CITIES = [
   note="Mooresville is the southwest edge of our regular service area.", lat=39.6128, lon=-86.3744),
 ]
 
-SERVICES = [
- dict(slug="basement-cleanout-indianapolis", name="Basement Cleanout", h1="Basement Cleanout in Indianapolis",
-  kw="basement cleanout Indianapolis", icon="01",
-  blurb="Decades of storage, flooded contents and old furniture, carried up the stairs and gone in one visit.",
-  intro="Basements in Indianapolis tend to collect everything: old furniture, boxes, workbenches, water-damaged items and things nobody wants to carry up the stairs. We do the heavy lifting so you do not have to.",
-  items=["Old furniture, couches and mattresses", "Water-damaged contents after flooding", "Boxes, bins and decades of storage", "Workbenches, shelving and exercise equipment", "Old appliances: washers, dryers, freezers", "Paneling, carpet and light demolition debris"],
-  faq=[("Do you carry items up basement stairs?", "Yes. Our crew carries everything out of the basement, up the stairs and to the truck. You do not have to move anything beforehand."),
-       ("Can you clean out a flooded or damp basement?", "We remove water-damaged furniture and contents. We do not handle mold remediation, but we can clear the space so a remediation company can work."),
-       ("How much does a basement cleanout cost?", "Price depends on how much space your items fill in our truck. Text a photo to (317) 637-8807 for a free quote before we start.")]),
- dict(slug="estate-cleanout-indianapolis", name="Estate Cleanout", h1="Estate & Hoarding Cleanout in Indianapolis",
-  kw="estate cleanout Indianapolis", icon="02",
-  blurb="Respectful, thorough cleanouts for families, attorneys and realtors on tight timelines.",
-  intro="Cleaning out a home after a loss, a move to assisted living or a sale is hard. We work respectfully and efficiently, setting aside what you want to keep and clearing the rest so the property is ready.",
-  items=["Whole-house cleanouts, attic to basement", "Hoarding and heavy-clutter cleanouts", "Furniture, clothing and household goods", "Garage, shed and outbuilding contents", "Pre-listing cleanouts for realtors", "Cleanouts coordinated with family or attorneys"],
-  faq=[("Can you work around items we want to keep?", "Yes. Walk the home with our crew first and mark what stays. We clear the rest."),
-       ("Do you donate usable items?", "Usable furniture and household goods go to donation partners where possible, and recyclables are separated from true trash."),
-       ("Can you work on a closing deadline?", "We schedule around closing dates and can often start within a day or two. Call (317) 637-8807 with your timeline.")]),
- dict(slug="furniture-removal-indianapolis", name="Furniture Removal", h1="Furniture Removal in Indianapolis",
-  kw="furniture removal Indianapolis", icon="03",
-  blurb="Couches, mattresses, dressers, tables and more, picked up and hauled away.",
-  intro="Old couches, sleeper sofas, dressers, mattresses and dining sets are bulky, heavy and hard to get rid of. We pick them up from inside your home, garage or curb and haul them off.",
-  items=["Couches, sectionals and recliners", "Mattresses and box springs", "Dressers, bed frames and nightstands", "Dining tables and chairs", "Desks, bookcases and office furniture", "Patio and outdoor furniture"],
-  faq=[("Do you take furniture from upstairs?", "Yes. We remove furniture from any floor, including apartments and second-story rooms."),
-       ("Can you take a single item?", "Yes. Single-item pickups are common. Text a photo for a firm price."),
-       ("Do you take mattresses?", "Yes, mattresses and box springs of any size are accepted.")]),
- dict(slug="appliance-removal-indianapolis", name="Appliance Removal", h1="Appliance Removal in Indianapolis",
-  kw="appliance removal Indianapolis", icon="04",
-  blurb="Refrigerators, washers, dryers, stoves and water heaters removed and disposed of properly.",
-  intro="Heavy appliances are a pain to move and often need special handling. We disconnect-ready, lift and haul away old refrigerators, washers, dryers, ranges, dishwashers and more.",
-  items=["Refrigerators and freezers", "Washers and dryers", "Stoves, ovens and ranges", "Dishwashers and microwaves", "Water heaters", "Window AC units and dehumidifiers"],
-  faq=[("Do you disconnect appliances?", "Appliances should be disconnected from water, gas and power before we arrive. We handle the lifting and hauling."),
-       ("Can you take a fridge with food inside?", "Please empty it first. We take it from there."),
-       ("Do you recycle appliances?", "Metal appliances are recycled where possible.")]),
- dict(slug="storm-debris-removal-indianapolis", name="Storm & Yard Debris", h1="Storm Damage & Yard Debris Removal in Indianapolis",
-  kw="storm debris removal Indianapolis", icon="05",
-  blurb="Downed limbs, ice-damaged fences and storm debris cleared after Central Indiana weather.",
-  intro="Central Indiana gets ice storms, high winds and heavy rain. After bad weather we haul downed limbs, damaged fencing, flooded basement contents and general storm debris.",
-  items=["Downed tree limbs and branches", "Ice and wind-damaged fencing", "Flooded basement contents", "Damaged outdoor furniture and playsets", "Shingles and roofing debris (priced by load)", "General yard waste and brush"],
-  faq=[("Do you cut down trees?", "No. We haul debris once limbs are on the ground and cut to a manageable size. We can point you to a tree service if needed."),
-       ("Can you help after a basement flood?", "Yes. We remove soaked furniture, carpet and contents so the space can dry and be repaired."),
-       ("Are heavy materials priced differently?", "Heavy items like shingles, concrete and dirt are priced by the bed load because of weight and disposal cost.")]),
- dict(slug="shed-deck-demolition-indianapolis", name="Shed, Deck & Light Demolition", h1="Shed, Deck & Hot Tub Removal in Indianapolis",
-  kw="shed removal Indianapolis", icon="06",
-  blurb="Sheds, decks, above-ground pools, hot tubs and playsets torn down and hauled in one visit.",
-  intro="Rotting decks, old sheds, swing sets and hot tubs are big jobs. We take them apart and haul every piece away so you do not have to rent a dumpster or make multiple trips.",
-  items=["Sheds and small outbuildings", "Wood decks and railings", "Above-ground pools", "Hot tubs and spas", "Swing sets and playsets", "Fences and gates"],
-  faq=[("Do you tear down as well as haul?", "Yes. We handle light demolition and haul everything away in one visit."),
-       ("Can you remove a hot tub?", "Yes, including draining and cutting where needed."),
-       ("Do I need a dumpster?", "No. We bring the truck and the crew. No dumpster rental needed.")]),
- dict(slug="mattress-removal-indianapolis", name="Mattress Removal", h1="Mattress Removal in Indianapolis",
-  kw="mattress removal Indianapolis", icon="07",
-  blurb="Mattresses and box springs picked up from any room or floor and disposed of properly.",
-  intro="Mattresses are awkward to carry and hard to dispose of. We pick up old mattresses and box springs from bedrooms, apartments and garages.",
-  items=["Twin, full, queen and king mattresses", "Box springs and foundations", "Bed frames and headboards", "Futons and sleeper sofas", "Crib and kids' mattresses", "Multiple-mattress move-outs"],
-  faq=[("Do you take box springs too?", "Yes. Mattresses, box springs and bed frames are all fine."),
-       ("Can you pick up from an apartment?", "Yes. We carry mattresses down stairs and out of apartment buildings."),
-       ("Is there a minimum?", "Single-item pickups are welcome. Text a photo for a firm price.")]),
- dict(slug="property-management-junk-removal-indianapolis", name="Property Management & Commercial", h1="Property Management & Commercial Junk Removal in Indianapolis",
-  kw="property management junk removal Indianapolis", icon="08",
-  blurb="Apartment turns, eviction cleanouts, office cleanouts and construction debris for repeat clients.",
-  intro="Landlords, property managers and small businesses need junk gone quickly and reliably. We handle apartment turnovers, eviction cleanouts, office cleanouts and construction debris across the Indianapolis metro.",
-  items=["Apartment and rental turnovers", "Eviction cleanouts", "Office and retail cleanouts", "Construction and renovation debris", "Pre-listing cleanouts for realtors", "Recurring pickups for repeat clients"],
-  faq=[("Do you offer pricing for repeat clients?", "Yes. Call (317) 637-8807 to set up repeat-client pricing."),
-       ("Can you turn a unit quickly?", "We prioritize fast turnarounds. Call us with your timeline."),
-       ("Do you work with realtors?", "Yes. Pre-listing cleanouts are a regular part of our work.")]),
-]
+from services_data import SERVICES
 
 HOME_FAQ = [
  ("Do I need to be home?", "Not necessarily. Point us at it over text or leave the garage open. Just confirm access and payment with us first."),
@@ -176,7 +111,7 @@ HOME_FAQ = [
 BIZ_ID = f"{BASE}/#business"
 def business_schema():
     return {"@context": "https://schema.org", "@type": ["LocalBusiness", "HomeAndConstructionBusiness"], "@id": BIZ_ID,
-        "name": "Junk Junkies Indiana", "alternateName": "Junk Junkies Indianapolis", "url": BASE + "/",
+        "name": "Junk Junkies Indiana Junk Removal Indianapolis", "alternateName": "Junk Junkies Indianapolis", "url": BASE + "/",
         "image": OG, "logo": f"{BASE}/assets/logo-badge.png", "telephone": PHONE_TEL,
         "email": "info@junkjunkiesindiana.com", "priceRange": "$250-$850",
         "description": "Junk removal, cleanouts and light demolition serving Indianapolis and surrounding Indiana cities.",
@@ -220,7 +155,7 @@ def head(title, desc, path, schema="", extra=""):
 def header():
     return f'''<header class="fixed top-0 inset-x-0 z-50 backdrop-blur-md bg-ink/80 border-b border-line">
 <div class="max-w-7xl mx-auto px-5 h-16 flex items-center justify-between">
-<a href="/" class="flex items-center gap-2.5"><img src="/assets/logo-icon.png" width="40" height="40" alt="Junk Junkies Indiana logo" class="h-10 w-10 rounded-lg logo-pulse"><span class="display block max-w-[11.5rem] sm:max-w-none text-[13px] sm:text-base font-extrabold leading-tight">Junk Junkies Indiana Junk Removal</span></a>
+<a href="/" class="flex items-center gap-2.5"><img src="/assets/logo-icon.png" width="40" height="40" alt="Junk Junkies Indiana logo" class="h-10 w-10 rounded-lg logo-pulse"><span class="display block max-w-[11.5rem] sm:max-w-none text-[13px] sm:text-base font-extrabold leading-tight">Junk Junkies Indiana Junk Removal Indianapolis</span></a>
 <nav class="hidden md:flex items-center gap-8 text-sm text-bone/70" aria-label="Main"><a href="/services/" class="hover:text-bone">Services</a><a href="/areas/" class="hover:text-bone">Service Area</a><a href="/our-work/" class="hover:text-bone">Our Work</a><a href="/#pricing" class="hover:text-bone">Pricing</a><a href="/#faq" class="hover:text-bone">FAQ</a></nav>
 <div class="flex items-center gap-3"><a href="tel:{PHONE_TEL}" class="hidden sm:inline-flex text-sm font-semibold text-bone/90 hover:text-ember">{PHONE_DISPLAY}</a><a href="#quote" class="inline-flex whitespace-nowrap rounded-full bg-ember hover:bg-emberDark text-ink font-bold text-sm px-4 sm:px-5 py-2.5 transition">Free Quote</a></div>
 </div></header>'''

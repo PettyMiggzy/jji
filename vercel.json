@@ -1,43 +1,95 @@
 {
-  "cleanUrls": true,
-  "trailingSlash": true,
-  "headers": [
+ "cleanUrls": true,
+ "trailingSlash": true,
+ "headers": [
+  {
+   "source": "/assets/(.*)",
+   "headers": [
     {
-      "source": "/assets/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=86400, stale-while-revalidate=604800"
-        }
-      ]
+     "key": "Cache-Control",
+     "value": "public, max-age=86400, stale-while-revalidate=604800"
+    }
+   ]
+  },
+  {
+   "source": "/(.*)",
+   "headers": [
+    {
+     "key": "X-Content-Type-Options",
+     "value": "nosniff"
     },
     {
-      "source": "/(.*)",
-      "headers": [
-        {
-          "key": "X-Content-Type-Options",
-          "value": "nosniff"
-        },
-        {
-          "key": "Referrer-Policy",
-          "value": "strict-origin-when-cross-origin"
-        },
-        {
-          "key": "X-Frame-Options",
-          "value": "SAMEORIGIN"
-        }
-      ]
-    }
-  ],
-  "functions": {
-    "api/*.js": {
-      "maxDuration": 20
-    }
-  },
-  "crons": [
+     "key": "Referrer-Policy",
+     "value": "strict-origin-when-cross-origin"
+    },
     {
-      "path": "/api/gbp-sync",
-      "schedule": "0 13 * * *"
+     "key": "X-Frame-Options",
+     "value": "SAMEORIGIN"
     }
-  ]
+   ]
+  }
+ ],
+ "functions": {
+  "api/*.js": {
+   "maxDuration": 20
+  }
+ },
+ "crons": [
+  {
+   "path": "/api/gbp-sync",
+   "schedule": "0 13 * * *"
+  }
+ ],
+ "redirects": [
+  {
+   "source": "/basement-cleanout-indianapolis",
+   "destination": "/garage-cleanouts-indianapolis/",
+   "permanent": true
+  },
+  {
+   "source": "/basement-cleanout-indianapolis/",
+   "destination": "/garage-cleanouts-indianapolis/",
+   "permanent": true
+  },
+  {
+   "source": "/estate-cleanout-indianapolis",
+   "destination": "/estate-cleanouts-indianapolis/",
+   "permanent": true
+  },
+  {
+   "source": "/estate-cleanout-indianapolis/",
+   "destination": "/estate-cleanouts-indianapolis/",
+   "permanent": true
+  },
+  {
+   "source": "/storm-debris-removal-indianapolis",
+   "destination": "/storm-debris-cleanup-indianapolis/",
+   "permanent": true
+  },
+  {
+   "source": "/storm-debris-removal-indianapolis/",
+   "destination": "/storm-debris-cleanup-indianapolis/",
+   "permanent": true
+  },
+  {
+   "source": "/shed-deck-demolition-indianapolis",
+   "destination": "/shed-removal-indianapolis/",
+   "permanent": true
+  },
+  {
+   "source": "/shed-deck-demolition-indianapolis/",
+   "destination": "/shed-removal-indianapolis/",
+   "permanent": true
+  },
+  {
+   "source": "/property-management-junk-removal-indianapolis",
+   "destination": "/services/",
+   "permanent": true
+  },
+  {
+   "source": "/property-management-junk-removal-indianapolis/",
+   "destination": "/services/",
+   "permanent": true
+  }
+ ]
 }
