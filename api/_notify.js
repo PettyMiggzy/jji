@@ -2,8 +2,9 @@
 export async function notifyOwner(subject, text) {
   const to = process.env.JARVIS_NOTIFY_EMAIL || 'bahmed3170@gmail.com';
   try {
-    await fetch('https://formsubmit.co/ajax/' + to, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json', Origin: 'https://www.junkjunkiesindiana.com', Referer: 'https://www.junkjunkiesindiana.com/admin/' },
+    const fr = await fetch('https://formsubmit.co/ajax/' + to, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json', Origin: 'https://www.junkjunkiesindiana.com', Referer: 'https://www.junkjunkiesindiana.com/admin/' },
       body: JSON.stringify({ _subject: subject, _template: 'table', _captcha: 'false', message: text }) });
+    console.log('notify email', fr.status, (await fr.text()).slice(0, 200));
   } catch (e) { console.error('notify email failed'); }
   const { TWILIO_SID: sid, TWILIO_TOKEN: tok, TWILIO_FROM: from, NOTIFY_TO: ph } = process.env;
   if (sid && tok && from && ph) {
