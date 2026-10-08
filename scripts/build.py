@@ -319,18 +319,26 @@ def crew_page():
     inp = "bg-ink border border-line rounded-xl px-4 py-3 w-full focus:outline-none focus:border-ember"
     city_opts = "".join(f'<optgroup label="{r["name"]}">' + "".join(f"<option>{ct[0]}</option>" for ct in r["cities"]) + "</optgroup>" for r in ROUTES.values())
     svc_opts = "".join(f"<option>{s['name']}</option>" for s in SERVICES)
-    body = f"""<main class="pt-24 pb-24"><div class="max-w-xl mx-auto px-5"><h1 class="display text-3xl font-extrabold mb-2">Post a finished job</h1><p class="text-bone/60 mb-6">Crew only. Take photos at the job site. The job is placed on the right website's map and Google profile automatically from your location.</p>
-<form id="crewForm" class="grid gap-4" data-cities='{json.dumps(pts)}'>
-<input name="pin" type="password" inputmode="numeric" placeholder="Crew PIN" autocomplete="off" required class="{inp}">
-<select name="service" required class="{inp}"><option value="">What did you haul?</option>{svc_opts}</select>
+    body = f"""<main class="pt-24 pb-24"><div class="max-w-xl mx-auto px-5"><h1 class="display text-3xl font-extrabold mb-2">Crew job photos</h1><p class="text-bone/60 mb-6">Crew only. Take a before photo when you start, then the after photo when you finish. The job drops onto the right website's map and Google profile automatically.</p>
+<div id="crewApp" data-cities='{json.dumps(pts)}'>
+<form id="crewLogin" class="grid gap-3 mb-8"><input name="pin" type="text" autocapitalize="characters" autocomplete="off" placeholder="Your crew code" required class="{inp}"><button class="rounded-full bg-ember hover:bg-emberDark text-ink font-bold px-8 py-4 transition">Sign in</button></form>
+<div id="crewMain" hidden>
+<p id="crewHi" class="text-bone/70 mb-6"></p>
+<h2 class="display text-xl font-extrabold mb-3">Open jobs <span class="text-bone/40 text-sm font-normal">(waiting on the after photo)</span></h2>
+<div id="crewOpen" class="grid gap-3 mb-10"></div>
+<h2 class="display text-xl font-extrabold mb-3">Start a new job</h2>
+<form id="crewForm" class="grid gap-4">
+<select name="service" required class="{inp}"><option value="">What are you hauling?</option>{svc_opts}</select>
 <button type="button" id="gpsBtn" class="rounded-xl border border-line px-4 py-3 text-left">📍 Use my location (recommended)</button>
 <select name="city" class="{inp}"><option value="">...or pick the city</option>{city_opts}</select>
 <input name="area" placeholder="Neighborhood (optional, no street addresses)" class="{inp}">
-<label class="block"><span class="text-sm text-bone/70">Before photo (optional)</span><input name="before" type="file" accept="image/*" capture="environment" class="mt-1 block w-full text-sm"></label>
-<label class="block"><span class="text-sm text-bone/70">After photo (required)</span><input name="after" type="file" accept="image/*" capture="environment" required class="mt-1 block w-full text-sm"></label>
-<textarea name="description" rows="3" maxlength="600" placeholder="1-3 sentences about the job" class="{inp}"></textarea>
+<label class="block"><span class="text-sm text-bone/70">Before photo (required)</span><input name="before" type="file" accept="image/*" capture="environment" required class="mt-1 block w-full text-sm"></label>
+<label class="block"><span class="text-sm text-bone/50">Already done? Add the after photo now (optional)</span><input name="after" type="file" accept="image/*" capture="environment" class="mt-1 block w-full text-sm"></label>
+<textarea name="description" rows="2" maxlength="600" placeholder="1-3 sentences about the job (optional)" class="{inp}"></textarea>
 <label class="flex items-center gap-3 text-sm text-bone/70"><input type="checkbox" name="gbp" checked class="accent-ember w-5 h-5"> Also post to our Google Business Profile</label>
-<button id="crewBtn" class="rounded-full bg-ember hover:bg-emberDark text-ink font-bold px-8 py-4 transition">Post job</button><p id="crewMsg" class="text-sm text-bone/70" role="status"></p></form><p class="text-xs text-bone/40 mt-6">Do not include customer faces, house numbers, license plates or street addresses. Photos are posted publicly. Map pins are shown only to about 1 km.</p></div></main>"""
+<button id="crewBtn" class="rounded-full bg-ember hover:bg-emberDark text-ink font-bold px-8 py-4 transition">Start job</button></form>
+</div>
+<p id="crewMsg" class="text-sm text-bone/70 mt-4" role="status"></p></div><p class="text-xs text-bone/40 mt-6">Do not include customer faces, house numbers, license plates or street addresses. Photos are posted publicly. Map pins are shown only to about 1 km.</p></div></main>"""
     write(path, head("Crew upload | Junk Junkies Indiana", "Crew upload", path, "", '<meta name="robots" content="noindex, nofollow">').replace('<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">', "") + header() + body + footer().replace("/assets/form.js", "/assets/crew.js"))
 
 def admin_page():

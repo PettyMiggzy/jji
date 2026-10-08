@@ -13,6 +13,17 @@ export async function ensureTable(sql) {
   await sql`ALTER TABLE jobs ADD COLUMN IF NOT EXISTS gbp_status TEXT NOT NULL DEFAULT 'none'`;
   await sql`CREATE TABLE IF NOT EXISTS leads (id SERIAL PRIMARY KEY, site TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now(), name TEXT, phone TEXT, email TEXT, service TEXT, city TEXT, zip TEXT, address TEXT, message TEXT, page TEXT)`;
   await sql`ALTER TABLE jobs ADD COLUMN IF NOT EXISTS hidden BOOLEAN NOT NULL DEFAULT false`;
+  await sql`ALTER TABLE jobs ADD COLUMN IF NOT EXISTS crew_name TEXT`;
+  await sql`ALTER TABLE jobs ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'done'`;
+  await sql`CREATE TABLE IF NOT EXISTS crew_codes (id SERIAL PRIMARY KEY, code TEXT UNIQUE NOT NULL, name TEXT NOT NULL, active BOOLEAN NOT NULL DEFAULT true, created_at TIMESTAMPTZ NOT NULL DEFAULT now())`;
+}
+// Who is posting? The shared CREW_PIN still works (shown as "Crew"); otherwise the code must belong to an active crew member.
+export async function crewWho(req, sql) {
+  if (crewOk(req)) return { name: 'Crew' };
+  const got = String(req.headers['x-crew-pin'] || '').trim();
+  if (!sql || !/^[A-Za-z0-9]{4,12}$/.test(got)) return null;
+  const [r] = await sql`SELECT name FROM crew_codes WHERE code = ${got} AND active = true`;
+  return r ? { name: r.name } : null;
 }
 export function crewOk(req) {
   const pin = process.env.CREW_PIN || '';

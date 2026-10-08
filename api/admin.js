@@ -21,14 +21,28 @@ export default async function handler(req, res) {
         COUNT(*) FILTER (WHERE gbp_status='done')::int AS gbp_done, COUNT(*) FILTER (WHERE gbp_status='pending')::int AS gbp_pending,
         COUNT(*) FILTER (WHERE gbp_status='failed')::int AS gbp_failed
         FROM jobs GROUP BY site ORDER BY site`;
-      const jobs = await sql`SELECT id, site, created_at, service, city, area, description, before_url, after_url, hidden, gbp_status FROM jobs ORDER BY created_at DESC LIMIT 150`;
+      const jobs = await sql`SELECT id, site, created_at, service, city, area, description, before_url, after_url, hidden, gbp_status, crew_name, status FROM jobs ORDER BY created_at DESC LIMIT 150`;
       const leads = await sql`SELECT id, site, created_at, name, phone, email, service, city, zip, message FROM leads ORDER BY created_at DESC LIMIT 100`;
       const gbp = {}; for (const s of ['spring', 'tomball', 'cypress', 'college-station', 'indiana']) gbp[s] = gbpConfigured(s);
-      return res.status(200).json({ stats, jobs, leads, gbp, reviews: !!(process.env.GOOGLE_PLACES_KEY && process.env.GOOGLE_PLACE_ID) });
+      const crew = await sql`SELECT id, code, name, active, created_at FROM crew_codes ORDER BY active DESC, created_at DESC`;
+      return res.status(200).json({ stats, jobs, leads, crew, gbp, reviews: !!(process.env.GOOGLE_PLACES_KEY && process.env.GOOGLE_PLACE_ID) });
     }
     if (req.method === 'POST') {
       const b = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
+      if (b.action === 'crew_add') {
+        const name = String(b.name || '').replace(/[<>]/g, '').trim().slice(0, 60);
+        if (!name) return res.status(400).json({ error: 'Type the crew member\'s name' });
+        const abc = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // no 0/O/1/I/L so codes are easy to read and type
+        for (let t = 0; t < 5; t++) {
+          let code = ''; for (const n of crypto.getRandomValues(new Uint8Array(6))) code += abc[n % abc.length];
+          try { await sql`INSERT INTO crew_codes (code, name) VALUES (${code}, ${name})`; return res.status(201).json({ ok: true, code, name }); } catch (e) { if (t === 4) throw e; }
+        }
+      }
       const id = Number(b.id); if (!Number.isInteger(id)) return res.status(400).json({ error: 'id required' });
+      if (b.action === 'crew_revoke' || b.action === 'crew_restore') {
+        const r = await sql`UPDATE crew_codes SET active = ${b.action === 'crew_restore'} WHERE id = ${id} RETURNING id`;
+        return res.status(200).json({ ok: true, updated: r.length });
+      }
       if (b.action === 'hide' || b.action === 'unhide') {
         const r = await sql`UPDATE jobs SET hidden = ${b.action === 'hide'} WHERE id = ${id} RETURNING id`;
         return res.status(200).json({ ok: true, updated: r.length });
