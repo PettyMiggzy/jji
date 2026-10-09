@@ -26,6 +26,14 @@ export async function ensureTable(sql) {
   await sql`ALTER TABLE leads ADD COLUMN IF NOT EXISTS lost_reason TEXT NOT NULL DEFAULT ''`;
   await sql`CREATE TABLE IF NOT EXISTS lead_events (id SERIAL PRIMARY KEY, lead_id INT NOT NULL, at TIMESTAMPTZ NOT NULL DEFAULT now(), kind TEXT NOT NULL, text TEXT NOT NULL DEFAULT '')`;
   await sql`CREATE INDEX IF NOT EXISTS lead_events_lead ON lead_events (lead_id, at DESC)`;
+  await sql`CREATE TABLE IF NOT EXISTS quotes (id SERIAL PRIMARY KEY, lead_id INT NOT NULL, status TEXT NOT NULL DEFAULT 'draft', items JSONB NOT NULL DEFAULT '[]', discount_pct NUMERIC(5,2) NOT NULL DEFAULT 0, tax_pct NUMERIC(5,2) NOT NULL DEFAULT 0,
+    deposit NUMERIC(10,2) NOT NULL DEFAULT 0, message TEXT NOT NULL DEFAULT '', token TEXT UNIQUE NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now(), sent_at TIMESTAMPTZ, viewed_at TIMESTAMPTZ, decided_at TIMESTAMPTZ,
+    client_note TEXT NOT NULL DEFAULT '', signed_name TEXT NOT NULL DEFAULT '')`;
+  await sql`CREATE TABLE IF NOT EXISTS invoices (id SERIAL PRIMARY KEY, lead_id INT NOT NULL, quote_id INT, status TEXT NOT NULL DEFAULT 'draft', items JSONB NOT NULL DEFAULT '[]', discount_pct NUMERIC(5,2) NOT NULL DEFAULT 0,
+    tax_pct NUMERIC(5,2) NOT NULL DEFAULT 0, due_date DATE, message TEXT NOT NULL DEFAULT '', token TEXT UNIQUE NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now(), sent_at TIMESTAMPTZ, viewed_at TIMESTAMPTZ,
+    paid_at TIMESTAMPTZ, payments JSONB NOT NULL DEFAULT '[]')`;
+  await sql`CREATE INDEX IF NOT EXISTS quotes_lead ON quotes (lead_id)`;
+  await sql`CREATE INDEX IF NOT EXISTS invoices_lead ON invoices (lead_id)`;
   await sql`ALTER TABLE jobs ADD COLUMN IF NOT EXISTS crew_name TEXT`;
   await sql`ALTER TABLE jobs ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'done'`;
   await sql`CREATE TABLE IF NOT EXISTS crew_codes (id SERIAL PRIMARY KEY, code TEXT UNIQUE NOT NULL, name TEXT NOT NULL, active BOOLEAN NOT NULL DEFAULT true, created_at TIMESTAMPTZ NOT NULL DEFAULT now())`;

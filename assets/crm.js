@@ -15,12 +15,18 @@
   const BLUE = '#3987e5', GRID = '#2c2c2a', MUTED = '#898781';
   let pin = ''; try { pin = sessionStorage.getItem('jjadmin') || ''; } catch (e) {}
   let drawerLead = null;
-  const S = { leads: [], crew: [], tab: 'today', open: null, adding: false, events: {}, toast: '', f: { status: 'all', site: 'all', source: 'all', q: '' }, tpl: '', loaded: false };
+  const QSTAT = { draft: 'Draft', sent: 'Sent', approved: 'Approved', declined: 'Declined', changes_requested: 'Changes requested' }, ISTAT = { draft: 'Draft', sent: 'Unpaid', partial: 'Partly paid', paid: 'Paid', void: 'Void' };
+  const PAYM = ['cash', 'check', 'card', 'zelle', 'cash app', 'venmo', 'other'];
+  const LOADS = [['Small pickup (minimum)', 99], ['Quarter trailer load', 250], ['Half trailer load', 475], ['Three-quarter trailer load', 675], ['Full trailer load', 850]];
+  const S = { leads: [], crew: [], tab: 'today', open: null, adding: false, events: {}, toast: '', f: { status: 'all', site: 'all', source: 'all', q: '' }, tpl: '', loaded: false, docs: {}, builder: null, payFor: null };
   try { S.tab = sessionStorage.getItem('jjcrmtab') || 'today'; } catch (e) {}
 
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const money = n => n == null || n === '' ? '' : '$' + Number(n).toLocaleString('en-US', { maximumFractionDigits: 0 });
   const num = n => Number(n) || 0;
+  const moneyC = n => '$' + Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const r2 = n => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
+  const calc = (items, dp, tp) => { const sub = r2(items.reduce((a, i) => a + num(i.qty) * num(i.price), 0)), disc = r2(sub * num(dp) / 100), taxable = r2(sub - disc), tax = r2(taxable * num(tp) / 100); return { subtotal: sub, discount: disc, tax, total: r2(taxable + tax) }; };
   const mins = d => (Date.now() - new Date(d)) / 60000;
   const dur = m => m < 60 ? Math.max(1, Math.round(m)) + ' min' : m < 1440 ? Math.round(m / 60) + ' hr' : Math.round(m / 1440) + ' day' + (Math.round(m / 1440) === 1 ? '' : 's');
   const ago = d => dur(mins(d)) + ' ago';
@@ -49,7 +55,7 @@
   async function load(quiet) {
     try {
       const d = await api('GET'); try { sessionStorage.setItem('jjadmin', pin); } catch (e) {}
-      S.leads = d.leads; S.crew = d.crew || []; S.loaded = true;
+      S.leads = d.leads; S.docs.all = d.docs || { quotes: [], invoices: [] }; S.crew = d.crew || []; S.loaded = true;
       const nNew = S.leads.filter(l => l.status === 'new').length; document.title = (nNew ? '(' + nNew + ') ' : '') + 'CRM';
       if (!root.querySelector('#crmMain')) shell();
       if (quiet && S.open) return; // do not redraw under someone who is editing
@@ -102,21 +108,28 @@
     const dueIds = new Set(due.map(l => l.id));
     const cold = S.leads.filter(l => l.status === 'quoted' && !dueIds.has(l.id) && mins(lastTouch(l)) > 3 * 1440).sort((a, b) => new Date(lastTouch(a)) - new Date(lastTouch(b)));
     const unscheduled = S.leads.filter(l => l.status === 'booked' && !l.scheduled_for);
-    return { callNow, due, jobs, cold, unscheduled };
+    const D = S.docs.all || { quotes: [], invoices: [] }, lead = id => byId(id);
+    const approved = D.quotes.filter(q => q.status === 'approved' && lead(q.lead_id) && lead(q.lead_id).status === 'booked' && !lead(q.lead_id).scheduled_for).map(q => ({ l: lead(q.lead_id), q }));
+    const changes = D.quotes.filter(q => q.status === 'changes_requested' && lead(q.lead_id)).map(q => ({ l: lead(q.lead_id), q }));
+    const unpaid = D.invoices.filter(v => ['sent', 'partial'].includes(v.status) && v.balance > 0 && lead(v.lead_id)).map(v => ({ l: lead(v.lead_id), v })).sort((a, b) => (a.v.due || '9') .localeCompare(b.v.due || '9'));
+    return { callNow, due, jobs, cold, unscheduled, approved, changes, unpaid };
   }
   function viewToday() {
     const b = todayBuckets(), oldest = b.callNow.length ? mins(b.callNow[0].created_at) : 0;
     const hr = new Date().getHours(), hello = hr < 12 ? 'Good morning' : hr < 18 ? 'Good afternoon' : 'Good evening';
-    const all = b.callNow.length + b.due.length + b.jobs.length + b.cold.length;
+    const all = b.callNow.length + b.due.length + b.jobs.length + b.cold.length + b.approved.length + b.changes.length + b.unpaid.length;
     return '<div class="mb-6"><div class="display text-2xl font-extrabold">' + hello + '.</div><p class="text-bone/60">' + (all ? 'Here is what needs you right now.' : 'Nothing is waiting on you. Nice.') + '</p></div>' +
       '<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">' +
       tile('Call now', b.callNow.length, b.callNow.length ? 'oldest waiting ' + dur(oldest) : 'all caught up', b.callNow.length > 0 && oldest > 15) +
       tile('Follow-ups due', b.due.length, 'today or overdue', b.due.length > 0) +
       tile('Jobs today + tomorrow', b.jobs.length, b.jobs.length ? money(sum(b.jobs, 'job_amount')) + ' booked' : 'nothing scheduled', false, 'schedule') +
       tile('Quotes going cold', b.cold.length, 'no contact in 3+ days', b.cold.length > 0) + '</div>' +
+      section('✅ Approved quotes: schedule them', 'The customer said yes. Pick a date and crew.', b.approved.map(x => leadCard(x.l, '<span class="text-ember">' + x.q.number + ' approved · ' + moneyC(x.q.total) + '</span>')), 'No approved quotes waiting to be scheduled.') +
       section('📞 Call now', 'Fast replies win jobs. Red means waiting over 15 minutes.', b.callNow.map(l => leadCard(l)), 'Every new lead has been contacted.') +
       section('⏰ Follow-ups due', 'Set from a lead when you quote it.', b.due.map(l => leadCard(l, '<span class="text-red-300">follow up ' + esc(l.follow_up) + '</span>')), 'No follow-ups due.') +
+      section('💬 Customer asked for changes', 'They answered your quote with a request.', b.changes.map(x => leadCard(x.l, '<span class="text-amber-300">' + x.q.number + (x.q.client_note ? ': “' + esc(x.q.client_note.slice(0, 60)) + '”' : '') + '</span>')), 'No change requests.') +
       section('🚛 Jobs today and tomorrow', b.unscheduled.length ? '⚠ ' + b.unscheduled.length + ' booked job(s) have no date yet' : 'Scheduled and assigned', b.jobs.map(l => leadCard(l)), 'No jobs on the schedule for the next two days.') +
+      section('💵 Unpaid invoices', 'Money you are still waiting on.', b.unpaid.map(x => leadCard(x.l, '<span class="' + (x.v.due && x.v.due < today() ? 'text-red-300 font-semibold' : 'text-bone/70') + '">' + x.v.number + ' · balance ' + moneyC(x.v.balance) + (x.v.due ? ' · due ' + esc(x.v.due) : '') + '</span>')), 'Nothing unpaid. 🎉') +
       section('🧊 Quotes going cold', 'Quoted, but nobody has touched them in over 3 days.', b.cold.map(l => leadCard(l, '<span class="text-amber-300">quiet for ' + dur(mins(lastTouch(l))) + '</span>')), 'No cold quotes.');
   }
 
@@ -205,14 +218,18 @@
     const resp = L.filter(l => l.contacted_at).map(l => (new Date(l.contacted_at) - new Date(l.created_at)) / 60000).filter(m => m >= 0).sort((a, b) => a - b);
     const med = resp.length ? resp[Math.floor(resp.length / 2)] : null, fast = resp.length ? Math.round(resp.filter(m => m <= 15).length / resp.length * 100) : null;
     const delta = l60.length ? Math.round((l30.length - l60.length) / l60.length * 100) : null;
+    const DQ = (S.docs.all || { quotes: [] }).quotes, DI = (S.docs.all || { invoices: [] }).invoices.filter(v => v.status !== 'void'), moneyD = n => n ? moneyC(n) : '$0', sentQ = DQ.filter(q => q.status !== 'draft').length, qRate = sentQ ? Math.round(DQ.filter(q => q.status === 'approved').length / sentQ * 100) : null;
     const kpi = (label, big, small) => '<div class="rounded-2xl border border-line bg-slate2 p-4"><div class="text-xs text-bone/50">' + label + '</div><div class="display text-3xl sm:text-4xl font-extrabold">' + big + '</div><div class="text-xs text-bone/50">' + small + '</div></div>';
-    const kpis = '<div class="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-6">' +
+    const kpis = '<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">' +
       kpi('Leads, last 30 days', l30.length, delta == null ? 'no earlier data yet' : (delta >= 0 ? '▲ ' : '▼ ') + Math.abs(delta) + '% vs the 30 days before') +
       kpi('Won revenue', money(sum(won, 'job_amount')) || '$0', won.length + ' booked or done job' + (won.length === 1 ? '' : 's')) +
       kpi('Win rate', rate == null ? '—' : rate + '%', decided ? won.length + ' won, ' + lost.length + ' lost' : 'needs a won or lost lead') +
       kpi('Average job', avg == null ? '—' : money(avg), jobsAmt.length ? 'across ' + jobsAmt.length + ' priced jobs' : 'add job amounts to see this') +
       kpi('Median reply time', med == null ? '—' : dur(med), fast == null ? 'no contacted leads yet' : fast + '% answered within 15 min') +
-      kpi('Open quotes', money(sum(L.filter(l => l.status === 'quoted'), 'quote_amount')) || '$0', L.filter(l => l.status === 'quoted').length + ' waiting on a decision') + '</div>';
+      kpi('Open quotes', money(sum(L.filter(l => l.status === 'quoted'), 'quote_amount')) || '$0', L.filter(l => l.status === 'quoted').length + ' waiting on a decision') +
+      kpi('Collected', moneyD(sum(DI, 'paid')), DI.filter(v => v.paid > 0).length + ' invoice' + (DI.filter(v => v.paid > 0).length === 1 ? '' : 's') + ' with payments') +
+      kpi('Unpaid invoices', moneyD(sum(DI.filter(v => ['sent', 'partial'].includes(v.status)), 'balance')), DI.filter(v => ['sent', 'partial'].includes(v.status)).length + ' waiting on payment' + (DI.filter(v => ['sent', 'partial'].includes(v.status) && v.due && v.due < today()).length ? ', ' + DI.filter(v => ['sent', 'partial'].includes(v.status) && v.due && v.due < today()).length + ' overdue' : '')) +
+      kpi('Quote approval rate', qRate == null ? '—' : qRate + '%', DQ.filter(q => q.status === 'approved').length + ' approved of ' + DQ.filter(q => q.status !== 'draft').length + ' sent') + '</div>';
     // leads per day (30)
     const days = []; for (let i = 29; i >= 0; i--) { const d = new Date(now - i * DAY), k = ymd(d); days.push({ k, label: i % 7 === 0 ? (d.getMonth() + 1) + '/' + d.getDate() : '', value: L.filter(l => ymd(new Date(l.created_at)) === k).length }); }
     days.forEach(d => d.tip = fmtDay(d.k + 'T12:00:00') + ': ' + d.value + ' lead' + (d.value === 1 ? '' : 's'));
@@ -241,11 +258,13 @@
   }
 
   /* ---------- DRAWER (lead detail) ---------- */
-  const EVICON = { created: '✨', call: '📞', note: '📝', status: '🔁', quote: '💲', job: '💲', schedule: '📅', assign: '👷', followup: '⏰', lost: '✖' };
+  const EVICON = { created: '✨', call: '📞', note: '📝', status: '🔁', quote: '💲', job: '💲', schedule: '📅', assign: '👷', followup: '⏰', lost: '✖', quote_draft: '🧾', quote_sent: '📤', quote_viewed: '👀', quote_approved: '✅', quote_declined: '🚫', quote_changes: '💬', invoice_draft: '🧾', invoice_sent: '📤', invoice_viewed: '👀', payment: '💵', invoice_void: '✖' };
   function evText(e) {
     const t = e.text;
     return { created: 'Lead received' + (t ? ' (' + (SOURCE[t] || t) + ')' : ''), call: t ? 'Called: ' + t : 'Called', note: t, status: (() => { const p = t.split('|'); return 'Moved from ' + (STATUS[p[0]] || p[0]) + ' to ' + (STATUS[p[1]] || p[1]); })(),
-      quote: t ? 'Quote set to ' + money(t) : 'Quote cleared', job: t ? 'Job amount set to ' + money(t) : 'Job amount cleared', schedule: t ? 'Scheduled for ' + fmtDT(t) : 'Schedule cleared', assign: t ? 'Assigned to ' + t : 'Unassigned', followup: t ? 'Follow-up set for ' + t : 'Follow-up cleared', lost: 'Marked lost: ' + t }[e.kind] || t;
+      quote: t ? 'Quote set to ' + money(t) : 'Quote cleared', job: t ? 'Job amount set to ' + money(t) : 'Job amount cleared', schedule: t ? 'Scheduled for ' + fmtDT(t) : 'Schedule cleared', assign: t ? 'Assigned to ' + t : 'Unassigned', followup: t ? 'Follow-up set for ' + t : 'Follow-up cleared', lost: 'Marked lost: ' + t,
+      quote_draft: 'Quote ' + t + ' drafted', quote_sent: (() => { const p = t.split('|'); return 'Quote ' + p[0] + ' sent (' + moneyC(p[1]) + ')'; })(), quote_viewed: 'Customer opened the quote', quote_approved: (() => { const p = t.split('|'); return 'Quote ' + p[0] + ' approved by ' + (p[1] === 'owner' ? 'you (by phone)' : p[1]); })(), quote_declined: 'Quote declined', quote_changes: 'Customer asked for changes: ' + (t.split('|')[1] || ''),
+      invoice_draft: 'Invoice ' + t + ' drafted', invoice_sent: (() => { const p = t.split('|'); return 'Invoice ' + p[0] + ' sent (' + moneyC(p[1]) + ')'; })(), invoice_viewed: 'Customer opened the invoice', payment: (() => { const p = t.split('|'); return 'Payment ' + moneyC(p[1]) + ' by ' + p[2] + ' on ' + p[0]; })(), invoice_void: 'Invoice ' + t + ' voided' }[e.kind] || t;
   }
   function templates(l) {
     const f = first(l.name), svc = (l.service || 'junk removal').toLowerCase(), biz = BIZ[l.site] || 'Junk Junkies', q = l.quote_amount != null ? money(l.quote_amount) : '[price]', when = l.scheduled_for ? fmtDT(l.scheduled_for) : '[date and time]';
@@ -272,7 +291,8 @@
       (l.status === 'lost' ? '<label class="' + lab + ' mt-3">Why was it lost?<select data-f="lost_reason" class="' + inp + ' mt-1"><option value="">Pick a reason</option>' + LOST.map(r => '<option' + (l.lost_reason === r ? ' selected' : '') + '>' + r + '</option>').join('') + '</select></label>' : '') + '</div>' +
       (l.message ? '<div><div class="' + lab + '">Customer said</div><p class="text-sm text-bone/80 mt-1">“' + esc(l.message) + '”</p></div>' : '') +
       ((l.photos && l.photos.length) ? '<div><div class="' + lab + ' mb-1">Photos from the customer</div><div class="flex flex-wrap gap-2">' + l.photos.map(u => '<a href="' + esc(u) + '" target="_blank" rel="noopener"><img loading="lazy" src="' + esc(u) + '" alt="Customer photo" class="w-24 h-24 rounded-lg object-cover"></a>').join('') + '</div></div>' : '') +
-      '<div class="rounded-2xl border border-line bg-slate2 p-3 grid gap-3"><div class="text-sm font-semibold">Quote and price</div><div class="flex flex-wrap gap-1.5">' + TIERS.map(t => '<button data-tier="' + t[0] + '" title="' + t[1] + '" class="rounded-full border border-line px-3 py-1.5 text-sm">' + money(t[0]) + '</button>').join('') + '</div><div class="grid grid-cols-2 gap-2"><label class="' + lab + '">Quote $<input data-f="quote_amount" inputmode="decimal" value="' + (l.quote_amount == null ? '' : l.quote_amount) + '" class="' + inp + ' mt-1"></label><label class="' + lab + '">Final job $<input data-f="job_amount" inputmode="decimal" value="' + (l.job_amount == null ? '' : l.job_amount) + '" class="' + inp + ' mt-1"></label></div><p class="text-xs text-bone/40">Tap a price to fill the quote: small pickup, 25%, 50%, 75% or a full trailer.</p></div>' +
+      docsHtml(l) +
+      '<div class="rounded-2xl border border-line bg-slate2 p-3 grid gap-3"><div class="text-sm font-semibold">Quick price (no formal quote)</div><div class="flex flex-wrap gap-1.5">' + TIERS.map(t => '<button data-tier="' + t[0] + '" title="' + t[1] + '" class="rounded-full border border-line px-3 py-1.5 text-sm">' + money(t[0]) + '</button>').join('') + '</div><div class="grid grid-cols-2 gap-2"><label class="' + lab + '">Quote $<input data-f="quote_amount" inputmode="decimal" value="' + (l.quote_amount == null ? '' : l.quote_amount) + '" class="' + inp + ' mt-1"></label><label class="' + lab + '">Final job $<input data-f="job_amount" inputmode="decimal" value="' + (l.job_amount == null ? '' : l.job_amount) + '" class="' + inp + ' mt-1"></label></div><p class="text-xs text-bone/40">Tap a price to fill the quote: small pickup, 25%, 50%, 75% or a full trailer.</p></div>' +
       '<div class="rounded-2xl border border-line bg-slate2 p-3 grid gap-3"><div class="text-sm font-semibold">Schedule and crew</div><label class="' + lab + '">Job date and time<input data-f="scheduled_for" type="datetime-local" value="' + localInput(l.scheduled_for) + '" class="' + inp + ' mt-1"></label><div class="grid grid-cols-2 gap-2"><label class="' + lab + '">Crew<select data-f="assigned" class="' + inp + ' mt-1"><option value="">Unassigned</option>' + S.crew.concat(l.assigned && !S.crew.includes(l.assigned) ? [l.assigned] : []).map(c => '<option' + (l.assigned === c ? ' selected' : '') + '>' + esc(c) + '</option>').join('') + '</select></label><label class="' + lab + '">Follow up on<input data-f="follow_up" type="date" value="' + esc(l.follow_up || '') + '" class="' + inp + ' mt-1"></label></div><div class="flex gap-2 text-xs"><button data-fu="1" class="rounded-full border border-line px-3 py-1">Tomorrow</button><button data-fu="3" class="rounded-full border border-line px-3 py-1">In 3 days</button><button data-fu="7" class="rounded-full border border-line px-3 py-1">Next week</button></div></div>' +
       '<div class="grid gap-2"><div class="text-sm font-semibold">Customer details</div><input data-f="address" placeholder="Job address" value="' + esc(l.address) + '" class="' + inp + '"><div class="grid grid-cols-3 gap-2"><input data-f="service" placeholder="Service" value="' + esc(l.service) + '" class="' + inp + ' col-span-3 sm:col-span-1"><input data-f="city" placeholder="City" value="' + esc(l.city) + '" class="' + inp + '"><input data-f="zip" placeholder="Zip" value="' + esc(l.zip) + '" class="' + inp + '"></div><div class="grid grid-cols-2 gap-2"><input data-f="name" placeholder="Name" value="' + esc(l.name) + '" class="' + inp + '"><input data-f="phone" placeholder="Phone" value="' + esc(l.phone) + '" class="' + inp + '"></div><input data-f="email" placeholder="Email" value="' + esc(l.email) + '" class="' + inp + '"><textarea data-f="notes" rows="3" placeholder="Job notes: gate code, stairs, anything the crew should know" class="' + inp + '">' + esc(l.notes) + '</textarea></div>' +
       '<div class="rounded-2xl border border-line bg-slate2 p-3 grid gap-2"><div class="text-sm font-semibold">Text this customer</div><div class="flex flex-wrap gap-1.5">' + tp.map(t => '<button data-tpl="' + esc(t[0]) + '" class="rounded-full border px-3 py-1.5 text-xs ' + (S.tpl === t[0] ? 'bg-ember text-ink border-ember font-bold' : 'border-line text-bone/70') + '">' + t[0] + '</button>').join('') + '</div>' +
@@ -293,6 +313,7 @@
     const el = document.getElementById('crmDrawer'); if (!el) return;
     if (S.adding) { drawerLead = null; el.innerHTML = addHtml(); document.getElementById('addF').onsubmit = onAdd; return; }
     const l = S.open && byId(S.open); if (!l) { drawerLead = null; el.innerHTML = ''; return; }
+    if (S.builder) { const keep = el.querySelector('aside'); const sc = keep ? keep.scrollTop : 0; el.innerHTML = builderHtml(l); const a2 = el.querySelector('aside'); if (a2) a2.scrollTop = sc; return; }
     // keep whatever is typed in the form (and the scroll position) when the panel redraws, e.g. after changing the stage or logging a call
     const same = drawerLead === l.id, draft = {}; if (same) el.querySelectorAll('[data-f]').forEach(i => { draft[i.dataset.f] = i.value; });
     const scroll = same && el.querySelector('aside') ? el.querySelector('aside').scrollTop : 0; el.innerHTML = drawerHtml(l); drawerLead = l.id;
@@ -301,9 +322,10 @@
   }
   async function openLead(id) {
     S.open = Number(id); S.adding = false; S.tpl = ''; drawerLead = null; renderDrawer(); document.body.style.overflow = 'hidden';
-    try { S.events[id] = (await api('GET', null, '?events=' + id)).events; } catch (e) { S.events[id] = []; } if (S.open === Number(id)) renderDrawer();
+    S.builder = null; S.builderLink = null; S.payFor = null;
+    await Promise.all([api('GET', null, '?events=' + id).then(r => { S.events[id] = r.events; }).catch(() => { S.events[id] = []; }), loadDocs(id)]); if (S.open === Number(id)) renderDrawer();
   }
-  function closeDrawer() { S.open = null; S.adding = false; document.body.style.overflow = ''; renderDrawer(); renderMain(); }
+  function closeDrawer() { S.open = null; S.adding = false; S.builder = null; S.builderLink = null; S.payFor = null; document.body.style.overflow = ''; renderDrawer(); renderMain(); }
   function drawerChanges(l) {
     const d = document.getElementById('crmDrawer'), out = {};
     d.querySelectorAll('[data-f]').forEach(i => {
@@ -323,6 +345,89 @@
     try { const r = await api('POST', d); S.adding = false; say('Lead added.'); S.tab = 'leads'; await load(); openLead(r.id); } catch (er) { say('⚠ ' + er.message); }
   }
 
+
+  /* ---------- QUOTES, INVOICES, PAYMENTS ---------- */
+  const smsLink = (l, text) => 'sms:' + digits(l.phone) + '?&body=' + encodeURIComponent(text);
+  const docMsg = (l, kind, link) => 'Hi ' + first(l.name) + ', here is your ' + kind + ' from ' + (BIZ[l.site] || 'Junk Junkies') + ': ' + link;
+  async function loadDocs(id) { try { S.docs[id] = await api('GET', null, '?lead=' + id); } catch (e) { S.docs[id] = { quotes: [], invoices: [] }; } }
+  async function refreshDocs(id) { await loadDocs(id); delete S.events[id]; await load(); try { S.events[id] = (await api('GET', null, '?events=' + id)).events; } catch (e) {} renderDrawer(); }
+  const chip = (txt, cls) => '<span class="inline-block rounded-full border px-2 py-0.5 text-xs ' + cls + '">' + txt + '</span>';
+  function docsHtml(l) {
+    const d = S.docs[l.id]; if (!d) return '<p class="text-xs text-bone/40">Loading quotes and invoices...</p>';
+    const btn = (attr, label, cls) => '<button ' + attr + ' class="rounded-full border ' + (cls || 'border-line') + ' px-3 py-1.5 text-xs">' + label + '</button>';
+    const qrows = d.quotes.map(q => {
+      const st = q.status === 'sent' && q.viewed_at ? 'Viewed, waiting' : QSTAT[q.status] || q.status, col = q.status === 'approved' ? 'border-ember text-ember' : q.status === 'declined' ? 'border-red-500/60 text-red-300' : q.status === 'changes_requested' ? 'border-amber-400/60 text-amber-300' : 'border-line text-bone/70';
+      return '<div class="rounded-xl border border-line bg-ink p-3"><div class="flex items-center justify-between gap-2"><div class="font-semibold">' + q.number + ' <span class="text-bone/60 font-normal">' + moneyC(q.total) + '</span></div>' + chip(st, col) + '</div>' +
+        (q.status === 'changes_requested' && q.client_note ? '<p class="text-xs text-amber-300 mt-1">“' + esc(q.client_note) + '”</p>' : '') + (q.status === 'approved' && q.signed_name ? '<p class="text-xs text-bone/50 mt-1">Approved by ' + esc(q.signed_name) + ' · ' + fmtDT(q.decided_at) + '</p>' : '') +
+        '<div class="flex flex-wrap gap-1.5 mt-2">' + (q.status !== 'approved' ? btn('data-qedit="' + q.id + '"', 'Edit') : '') + (q.status !== 'draft' ? '<a href="' + smsLink(l, docMsg(l, 'quote', q.link)) + '" class="rounded-full border border-line px-3 py-1.5 text-xs">Text link</a>' + btn('data-copylink="' + esc(q.link) + '"', 'Copy link') + '<a href="' + esc(q.link) + '" target="_blank" rel="noopener" class="rounded-full border border-line px-3 py-1.5 text-xs">Preview</a>' : btn('data-qsendid="' + q.id + '"', 'Send to customer', 'border-ember text-ember')) +
+        (q.status === 'sent' || q.status === 'changes_requested' ? btn('data-qapprove="' + q.id + '"', 'Mark approved (by phone)') : '') + (q.status === 'approved' && !d.invoices.some(v => v.quote_id === q.id) ? btn('data-qinvoice="' + q.id + '"', 'Create invoice', 'border-ember text-ember') : '') + (q.status === 'draft' ? btn('data-qdel="' + q.id + '"', 'Delete') : '') + '</div></div>';
+    }).join('');
+    const irows = d.invoices.map(v => {
+      const st = ISTAT[v.status] || v.status, over = v.due && v.due < today() && ['sent', 'partial'].includes(v.status), col = v.status === 'paid' ? 'border-ember text-ember' : over ? 'border-red-500/60 text-red-300' : 'border-line text-bone/70';
+      const pay = S.payFor === v.id ? '<div class="mt-2 grid gap-2 rounded-lg border border-line p-2"><div class="grid grid-cols-2 gap-2"><input id="payAmt" inputmode="decimal" value="' + v.balance + '" class="bg-ink border border-line rounded-lg px-3 py-2 text-sm"><select id="payMeth" class="bg-ink border border-line rounded-lg px-3 py-2 text-sm">' + PAYM.map(m => '<option>' + m + '</option>').join('') + '</select></div><input id="payNote" placeholder="Note (optional)" class="bg-ink border border-line rounded-lg px-3 py-2 text-sm"><div class="flex gap-2"><button data-paysave="' + v.id + '" class="rounded-full bg-ember text-ink font-bold px-4 py-2 text-sm">Record payment</button><button data-paycancel class="text-xs text-bone/50 underline">Cancel</button></div></div>' : '';
+      return '<div class="rounded-xl border border-line bg-ink p-3"><div class="flex items-center justify-between gap-2"><div class="font-semibold">' + v.number + ' <span class="text-bone/60 font-normal">' + moneyC(v.total) + '</span></div>' + chip((over ? 'Overdue · ' : '') + st, col) + '</div>' +
+        '<div class="text-xs text-bone/50 mt-1">' + (v.paid ? 'Paid ' + moneyC(v.paid) + ' · ' : '') + (v.status !== 'paid' && v.status !== 'void' ? 'Balance ' + moneyC(v.balance) : '') + (v.due ? ' · due ' + esc(v.due) : '') + '</div>' +
+        (v.payments && v.payments.length ? '<div class="text-xs text-bone/50 mt-1">' + v.payments.map(p => moneyC(p.amount) + ' ' + esc(p.method) + ' · ' + fmtDay(p.at)).join('<br>') + '</div>' : '') +
+        '<div class="flex flex-wrap gap-1.5 mt-2">' + (!['paid', 'void'].includes(v.status) ? btn('data-iedit="' + v.id + '"', 'Edit') : '') + (v.status === 'draft' ? btn('data-isendid="' + v.id + '"', 'Send to customer', 'border-ember text-ember') : '') + (v.status !== 'draft' ? '<a href="' + smsLink(l, docMsg(l, 'invoice', v.link)) + '" class="rounded-full border border-line px-3 py-1.5 text-xs">Text link</a>' + btn('data-copylink="' + esc(v.link) + '"', 'Copy link') + '<a href="' + esc(v.link) + '" target="_blank" rel="noopener" class="rounded-full border border-line px-3 py-1.5 text-xs">Preview</a>' : '') +
+        (['sent', 'partial', 'draft'].includes(v.status) ? btn('data-payopen="' + v.id + '"', 'Record payment', 'border-ember text-ember') : '') + (!['paid', 'void'].includes(v.status) && !v.paid ? btn('data-ivoid="' + v.id + '"', 'Void') : '') + '</div>' + pay + '</div>';
+    }).join('');
+    return '<div class="rounded-2xl border border-line bg-slate2 p-3 grid gap-3"><div class="flex items-center justify-between gap-2"><div class="text-sm font-semibold">Quotes and invoices</div><div class="flex gap-1.5"><button data-newq class="rounded-full bg-ember text-ink font-bold px-3.5 py-1.5 text-xs">+ Quote</button><button data-newi class="rounded-full border border-line px-3.5 py-1.5 text-xs">+ Invoice</button></div></div>' +
+      (qrows || irows ? '<div class="grid gap-2">' + qrows + irows + '</div>' : '<p class="text-xs text-bone/40">Nothing yet. Build an itemized quote, text the customer a link, and they can approve it from their phone.</p>') + '</div>';
+  }
+  function startBuilder(type, l, src) {
+    const isQ = type === 'quote', base = { type, lead_id: l.id, id: src ? src.id : null, status: src ? src.status : 'draft', quote_id: null, items: src ? src.items.map(i => Object.assign({}, i)) : [], discount_pct: src ? src.discount_pct : 0, tax_pct: src ? src.tax_pct : 0, deposit: src && src.deposit || 0, due: src && src.due || '',
+      message: src ? src.message : isQ ? 'Thanks for reaching out, ' + first(l.name) + '! Here is your quote for ' + (l.service ? l.service.toLowerCase() : 'junk removal') + '. Tap Approve and we will get you on the schedule.' : 'Thank you for choosing ' + (BIZ[l.site] || 'Junk Junkies') + '! We appreciate your business.' };
+    if (!src && !base.items.length) base.items.push({ name: 'Half trailer load', description: l.service || '', qty: 1, price: 475 });
+    S.builder = base; renderDrawer();
+  }
+  function readBuilder() {
+    const b = S.builder; if (!b) return;
+    const el = document.getElementById('crmDrawer'); if (!el.querySelector('[data-bi]')) return;
+    b.items = [...el.querySelectorAll('[data-row]')].map(r => ({ name: r.querySelector('[data-bi=name]').value, description: r.dataset.desc || '', qty: r.querySelector('[data-bi=qty]').value, price: r.querySelector('[data-bi=price]').value }));
+    b.discount_pct = el.querySelector('[data-bf=discount_pct]').value; b.tax_pct = el.querySelector('[data-bf=tax_pct]').value; b.message = el.querySelector('[data-bf=message]').value;
+    const dep = el.querySelector('[data-bf=deposit]'); if (dep) b.deposit = dep.value; const due = el.querySelector('[data-bf=due]'); if (due) b.due = due.value;
+  }
+  function builderHtml(l) {
+    const b = S.builder, isQ = b.type === 'quote', inp = 'bg-ink border border-line rounded-xl px-3 py-2 w-full text-sm', t = calc(b.items.map(i => ({ qty: num(i.qty) || 1, price: i.price })), b.discount_pct, b.tax_pct);
+    return '<div class="fixed inset-0 z-[60]"><div data-bclose class="absolute inset-0 bg-black/70"></div><aside class="absolute right-0 top-0 h-full w-full sm:w-[36rem] bg-ink border-l border-line overflow-y-auto" role="dialog" aria-label="' + (isQ ? 'Quote' : 'Invoice') + ' builder">' +
+      '<div class="sticky top-0 z-10 bg-ink/95 backdrop-blur border-b border-line px-4 py-3 flex items-center justify-between gap-3"><div class="min-w-0"><div class="display text-xl font-extrabold truncate">' + (b.id ? 'Edit ' : 'New ') + (isQ ? 'quote' : 'invoice') + '</div><div class="text-xs text-bone/50">for ' + esc(l.name) + ' · ' + esc(SITES[l.site] || l.site) + '</div></div><button data-bclose class="rounded-full border border-line w-10 h-10 shrink-0" aria-label="Back">✕</button></div>' +
+      '<div class="p-4 grid gap-4"><div><div class="text-xs text-bone/50 mb-1.5">Add a line (tap one, or add your own)</div><div class="flex flex-wrap gap-1.5">' + LOADS.map((x, i) => '<button data-badd="' + i + '" class="rounded-full border border-line px-3 py-1.5 text-xs">' + x[0].replace(' trailer load', '').replace(' (minimum)', '') + ' ' + money(x[1]) + '</button>').join('') + '<button data-badd="custom" class="rounded-full border border-ember text-ember px-3 py-1.5 text-xs">+ Custom item</button></div></div>' +
+      '<div class="grid gap-2">' + b.items.map((i, k) => '<div data-row="' + k + '" data-desc="' + esc(i.description || '') + '" class="rounded-xl border border-line bg-slate2 p-2 grid gap-2"><input data-bi="name" placeholder="Item" value="' + esc(i.name) + '" class="' + inp + '"><div class="grid grid-cols-[4rem_1fr_auto] gap-2 items-center"><input data-bi="qty" inputmode="decimal" value="' + esc(i.qty) + '" aria-label="Quantity" class="' + inp + '"><input data-bi="price" inputmode="decimal" value="' + esc(i.price) + '" aria-label="Price each" class="' + inp + '"><button data-bdel="' + k + '" class="text-bone/50 px-2" aria-label="Remove">✕</button></div><div class="text-xs text-bone/40 text-right">' + moneyC(num(i.qty || 1) * num(i.price)) + (i.description ? ' · ' + esc(i.description) : '') + '</div></div>').join('') + '</div>' +
+      '<div class="grid grid-cols-' + (isQ ? '3' : '3') + ' gap-2"><label class="text-xs text-bone/50">Discount %<input data-bf="discount_pct" inputmode="decimal" value="' + esc(b.discount_pct) + '" class="' + inp + ' mt-1"></label><label class="text-xs text-bone/50">Sales tax %<input data-bf="tax_pct" inputmode="decimal" value="' + esc(b.tax_pct) + '" class="' + inp + ' mt-1"></label>' + (isQ ? '<label class="text-xs text-bone/50">Deposit $<input data-bf="deposit" inputmode="decimal" value="' + esc(b.deposit) + '" class="' + inp + ' mt-1"></label>' : '<label class="text-xs text-bone/50">Due date<input data-bf="due" type="date" value="' + esc(b.due) + '" class="' + inp + ' mt-1"></label>') + '</div>' +
+      '<label class="text-xs text-bone/50">Message to the customer<textarea data-bf="message" rows="3" class="' + inp + ' mt-1">' + esc(b.message) + '</textarea></label>' +
+      '<div class="rounded-2xl border border-line bg-slate2 p-3 text-sm grid gap-1"><div class="flex justify-between text-bone/70"><span>Subtotal</span><span>' + moneyC(t.subtotal) + '</span></div>' + (t.discount ? '<div class="flex justify-between text-bone/70"><span>Discount</span><span>−' + moneyC(t.discount) + '</span></div>' : '') + (t.tax ? '<div class="flex justify-between text-bone/70"><span>Tax</span><span>' + moneyC(t.tax) + '</span></div>' : '') + '<div class="flex justify-between display text-xl font-extrabold"><span>Total</span><span>' + moneyC(t.total) + '</span></div>' + (isQ && num(b.deposit) ? '<div class="flex justify-between text-bone/60"><span>Deposit requested</span><span>' + moneyC(b.deposit) + '</span></div>' : '') + '</div>' +
+      (S.builderLink ? '<div class="rounded-xl border border-ember/50 bg-ember/10 p-3 grid gap-2"><div class="text-sm text-ember font-semibold">Ready to send</div><div class="text-xs break-all text-bone/70">' + esc(S.builderLink) + '</div><div class="flex flex-wrap gap-2"><a href="' + smsLink(l, docMsg(l, b.type, S.builderLink)) + '" class="rounded-full bg-ember text-ink font-bold px-4 py-2 text-sm">Text it to ' + esc(first(l.name)) + '</a><button data-copylink="' + esc(S.builderLink) + '" class="rounded-full border border-line px-4 py-2 text-sm">Copy link</button><a href="' + esc(S.builderLink) + '" target="_blank" rel="noopener" class="rounded-full border border-line px-4 py-2 text-sm">Preview</a></div></div>' : '') +
+      '<div class="flex gap-3 sticky bottom-0 bg-ink/95 backdrop-blur py-3 -mx-4 px-4 border-t border-line"><button data-bsave="send" class="rounded-full bg-ember text-ink font-bold px-6 py-3">Save and ' + (b.status === 'draft' || !b.id ? 'send' : 'update') + '</button><button data-bsave="draft" class="rounded-full border border-line px-5 py-3">Save draft</button></div></div></aside></div>';
+  }
+  async function builderSave(mode) {
+    readBuilder(); const b = S.builder; if (!b) return;
+    try {
+      const payload = { action: b.type + '_save', lead_id: b.lead_id, id: b.id, quote_id: b.quote_id, items: b.items, discount_pct: b.discount_pct, tax_pct: b.tax_pct, message: b.message, deposit: b.deposit, due: b.due };
+      const r = await api('POST', payload), doc = r.quote || r.invoice; b.id = doc.id; b.status = doc.status;
+      if (mode === 'send') { const r2 = await api('POST', { action: b.type + '_send', id: doc.id }); S.builderLink = (r2.quote || r2.invoice).link; b.status = (r2.quote || r2.invoice).status; say((b.type === 'quote' ? 'Quote' : 'Invoice') + ' sent. Text the link to the customer.'); }
+      else say('Draft saved.');
+      await refreshDocs(b.lead_id); if (mode !== 'send') { S.builder = null; S.builderLink = null; renderDrawer(); }
+    } catch (e) { say('⚠ ' + e.message); }
+  }
+  async function docClick(t, l) {
+    const d = S.docs[l.id] || { quotes: [], invoices: [] }, run = async (body, msg) => { try { await api('POST', body); say(msg); await refreshDocs(l.id); } catch (e) { say('⚠ ' + e.message); } };
+    if (t.hasAttribute('data-newq')) { S.builderLink = null; startBuilder('quote', l); return true; }
+    if (t.hasAttribute('data-newi')) { S.builderLink = null; startBuilder('invoice', l); return true; }
+    if (t.dataset.qedit) { S.builderLink = null; startBuilder('quote', l, d.quotes.find(q => q.id === Number(t.dataset.qedit))); return true; }
+    if (t.dataset.iedit) { S.builderLink = null; startBuilder('invoice', l, d.invoices.find(v => v.id === Number(t.dataset.iedit))); return true; }
+    if (t.dataset.qsendid) { try { const r = await api('POST', { action: 'quote_send', id: Number(t.dataset.qsendid) }); S.builderLink = null; say('Quote sent. Use Text link to message the customer.'); await refreshDocs(l.id); } catch (e) { say('⚠ ' + e.message); } return true; }
+    if (t.dataset.isendid) { await run({ action: 'invoice_send', id: Number(t.dataset.isendid) }, 'Invoice sent. Use Text link to message the customer.'); return true; }
+    if (t.dataset.qapprove) { if (confirm('Record that the customer approved this quote?')) await run({ action: 'quote_set', id: Number(t.dataset.qapprove), status: 'approved' }, 'Quote approved. The job is booked.'); return true; }
+    if (t.dataset.qinvoice) { const q = d.quotes.find(x => x.id === Number(t.dataset.qinvoice)); try { await api('POST', { action: 'invoice_save', lead_id: l.id, quote_id: q.id, items: q.items, discount_pct: q.discount_pct, tax_pct: q.tax_pct, message: '' }); say('Invoice drafted from the quote.'); await refreshDocs(l.id); } catch (e) { say('⚠ ' + e.message); } return true; }
+    if (t.dataset.qdel) { if (confirm('Delete this draft quote?')) await run({ action: 'quote_delete', id: Number(t.dataset.qdel) }, 'Draft deleted.'); return true; }
+    if (t.dataset.ivoid) { if (confirm('Void this invoice?')) await run({ action: 'invoice_void', id: Number(t.dataset.ivoid) }, 'Invoice voided.'); return true; }
+    if (t.dataset.payopen) { S.payFor = Number(t.dataset.payopen); renderDrawer(); return true; }
+    if (t.hasAttribute('data-paycancel')) { S.payFor = null; renderDrawer(); return true; }
+    if (t.dataset.paysave) { const body = { action: 'payment_add', id: Number(t.dataset.paysave), amount: document.getElementById('payAmt').value, method: document.getElementById('payMeth').value, note: document.getElementById('payNote').value }; S.payFor = null; await run(body, 'Payment recorded.'); return true; }
+    if (t.dataset.copylink) { try { await navigator.clipboard.writeText(t.dataset.copylink); say('Link copied.'); } catch (e) { say(t.dataset.copylink); } return true; }
+    return false;
+  }
+
   /* ---------- events ---------- */
   root.addEventListener('click', async e => {
     const t = e.target.closest('button,a,[data-close]'); if (!t) return;
@@ -334,6 +439,15 @@
     if (t.id === 'crmCsv') { exportCsv(); return; }
     if (t.dataset.fstatus) { S.f.status = t.dataset.fstatus; renderMain(); return; }
     const l = S.open && byId(S.open); if (!l) return;
+    if (S.builder) {
+      if (t.hasAttribute('data-bclose')) { S.builder = null; S.builderLink = null; renderDrawer(); return; }
+      if (t.dataset.badd) { readBuilder(); const x = t.dataset.badd === 'custom' ? { name: '', description: '', qty: 1, price: '' } : { name: LOADS[Number(t.dataset.badd)][0], description: l.service || '', qty: 1, price: LOADS[Number(t.dataset.badd)][1] }; S.builder.items = S.builder.items.filter(i => i.name || num(i.price)).concat([x]); renderDrawer(); return; }
+      if (t.dataset.bdel) { readBuilder(); S.builder.items.splice(Number(t.dataset.bdel), 1); renderDrawer(); return; }
+      if (t.dataset.bsave) { await builderSave(t.dataset.bsave); return; }
+      if (t.dataset.copylink) { await docClick(t, l); return; }
+      return;
+    }
+    if (await docClick(t, l)) return;
     if (t.dataset.status) { await save(l.id, { status: t.dataset.status }, 'Moved to ' + STATUS[t.dataset.status] + '.'); return; }
     if (t.dataset.call) { try { await api('POST', { action: 'call', id: l.id, text: t.dataset.call }); say('Call logged.'); delete S.events[l.id]; await load(); S.events[l.id] = (await api('GET', null, '?events=' + l.id)).events; renderDrawer(); } catch (er) { say('⚠ ' + er.message); } return; }
     if (t.dataset.tier) { const i = document.querySelector('#crmDrawer [data-f=quote_amount]'); i.value = t.dataset.tier; return; }
@@ -345,8 +459,8 @@
     if (t.hasAttribute('data-del')) { if (confirm('Delete this lead and its history for good?')) { try { await api('POST', { action: 'delete', id: l.id }); closeDrawer(); say('Deleted.'); await load(); } catch (er) { say('⚠ ' + er.message); } } return; }
   });
   root.addEventListener('change', e => { const t = e.target; if (t.id === 'fSite') { S.f.site = t.value; renderMain(); } else if (t.id === 'fSrc') { S.f.source = t.value; renderMain(); } else if (t.id === 'tplText') { const l = byId(S.open), a = document.getElementById('tplSms'); if (a && l) a.href = 'sms:' + digits(l.phone) + '?&body=' + encodeURIComponent(t.value); } });
-  root.addEventListener('input', e => { const t = e.target; if (t.id === 'crmQ') { S.f.q = t.value; renderMain(); } else if (t.id === 'tplText') { const l = byId(S.open), a = document.getElementById('tplSms'); if (a && l) a.href = 'sms:' + digits(l.phone) + '?&body=' + encodeURIComponent(t.value); } });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape' && (S.open || S.adding)) closeDrawer(); });
+  root.addEventListener('input', e => { const t = e.target; if (S.builder && (t.dataset.bi || t.dataset.bf)) { readBuilder(); const sc = document.querySelector('#crmDrawer aside').scrollTop, ae = document.activeElement, key = ae && (ae.dataset.bi || ae.dataset.bf), row = ae && ae.closest('[data-row]') ? ae.closest('[data-row]').dataset.row : null, pos = ae && ae.selectionStart; renderDrawer(); const el = row !== null ? document.querySelector('#crmDrawer [data-row="' + row + '"] [data-bi=' + key + ']') : document.querySelector('#crmDrawer [data-bf=' + key + ']'); document.querySelector('#crmDrawer aside').scrollTop = sc; if (el) { el.focus(); try { el.setSelectionRange(pos, pos); } catch (x) {} } return; } if (t.id === 'crmQ') { S.f.q = t.value; renderMain(); } else if (t.id === 'tplText') { const l = byId(S.open), a = document.getElementById('tplSms'); if (a && l) a.href = 'sms:' + digits(l.phone) + '?&body=' + encodeURIComponent(t.value); } });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') { if (S.builder) { S.builder = null; S.builderLink = null; renderDrawer(); } else if (S.open || S.adding) closeDrawer(); } });
   // drag-and-drop on the board is wired in wireBoard(); hover/tap tooltips for charts:
   const tip = () => document.getElementById('crmTip');
   const showTip = (el, x, y) => { const t = tip(); if (!t) return; t.textContent = el.dataset.tip; t.classList.remove('hidden'); const w = t.offsetWidth; t.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, x - w / 2)) + 'px'; t.style.top = Math.max(8, y - 44) + 'px'; };

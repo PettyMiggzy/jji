@@ -353,8 +353,13 @@ def crm_page():
     for path in ("/crm/", "/admin/crm/"):  # same page at the short address and the old one
         write(path, head("CRM", "Owner CRM", path, "", '<meta name="robots" content="noindex, nofollow">').replace('<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">', "") + header() + body + footer().replace("/assets/form.js", "/assets/crm.js"))
 
+def portal_page():
+    path = "/q/"
+    body = """<main class="pt-28 pb-24"><div class="max-w-2xl mx-auto px-5"><div id="portalApp"><p class="text-bone/60">Loading...</p></div></div></main>"""
+    write(path, head("Your quote or invoice", "Your quote or invoice", path, "", '<meta name="robots" content="noindex, nofollow">').replace('<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">', "") + header() + body + footer().replace("/assets/form.js", "/assets/portal.js"))
+
 def build():
-    work_page(); crew_page(); admin_page(); crm_page()
+    work_page(); crew_page(); admin_page(); crm_page(); portal_page()
     for c in CITIES: city_page(c)
     for s in SERVICES: service_page(s)
     cc = "".join(f'<a href="/{c["slug"]}-junk-removal/" class="rounded-2xl bg-slate2 border border-line p-6 hover:border-ember/60 transition"><h2 class="display font-bold text-xl mb-1">Junk Removal in {c["name"]}</h2><p class="text-sm text-bone/60">{c["county"]} County · {c["zips"]}</p></a>' for c in CITIES)
