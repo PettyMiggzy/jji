@@ -56,7 +56,7 @@
     try {
       const d = await api('GET'); try { sessionStorage.setItem('jjadmin', pin); } catch (e) {}
       S.leads = d.leads; S.docs.all = d.docs || { quotes: [], invoices: [] }; S.crew = d.crew || []; S.loaded = true;
-      const nNew = S.leads.filter(l => l.status === 'new').length; document.title = (nNew ? '(' + nNew + ') ' : '') + 'STAGR';
+      const nNew = S.leads.filter(l => l.status === 'new').length; document.title = (nNew ? '(' + nNew + ') ' : '') + 'STAG';
       if (!root.querySelector('#crmMain')) shell();
       if (quiet && S.open) return; // do not redraw under someone who is editing
       renderMain(); renderDrawer();
