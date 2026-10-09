@@ -1,7 +1,7 @@
 // "Ask Jarvis" chat for the owner dashboard. Collects website change requests (with photos) into a queue.
 import { put } from '@vercel/blob';
 import Anthropic from '@anthropic-ai/sdk';
-import { db, adminOk, ensureJarvis, clean } from './_lib.js';
+import { db, adminGate, ensureJarvis, clean } from './_lib.js';
 import { notifyOwner } from './_notify.js';
 
 const MODEL = process.env.JARVIS_MODEL || 'claude-sonnet-5-5';
@@ -40,8 +40,9 @@ function decodeImg(dataUrl) {
 
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
-  if (!adminOk(req)) return res.status(401).json({ error: 'Admin PIN required' });
-  const sql = db(); if (!sql) return res.status(503).json({ error: 'Database not configured' });
+  const sql = db();
+  if (!(await adminGate(req, res, sql))) return;
+  if (!sql) return res.status(503).json({ error: 'Database not configured' });
   try {
     await ensureJarvis(sql);
     if (req.method === 'GET') {

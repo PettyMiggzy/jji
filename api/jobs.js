@@ -1,5 +1,5 @@
 import { put, del } from '@vercel/blob';
-import { site, db, ensureTable, crewWho, clean } from './_lib.js';
+import { site, db, ensureTable, crewWho, adminGate, clean } from './_lib.js';
 import { nearest } from './_routes.js';
 import { uploadToGbp, gbpConfigured } from './_gbp.js';
 
@@ -33,9 +33,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ configured: true, jobs: rows });
     }
     if (req.method === 'DELETE') {
-      const ap = process.env.ADMIN_PIN || '', got = String(req.headers['x-admin-pin'] || '');
-      let d = ap.length === got.length && ap.length > 0 ? 0 : 1; for (let i = 0; i < ap.length && !d; i++) d |= ap.charCodeAt(i) ^ got.charCodeAt(i);
-      if (d) return res.status(401).json({ error: 'Admins only' });
+      if (!(await adminGate(req, res, sql))) return;
     }
     if (!sql) return res.status(503).json({ error: 'Database not configured yet' });
     await ensureTable(sql);

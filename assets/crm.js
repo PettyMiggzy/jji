@@ -54,7 +54,10 @@
       if (!root.querySelector('#crmMain')) shell();
       if (quiet && S.open) return; // do not redraw under someone who is editing
       renderMain(); renderDrawer();
-    } catch (e) { if (!S.loaded) login(e.message); else { S.toast = '⚠ ' + e.message; renderMain(); } }
+    } catch (e) {
+      if (/PIN/.test(e.message)) { pin = ''; S.loaded = false; try { sessionStorage.removeItem('jjadmin'); } catch (x) {} login(e.message); } // wrong or changed PIN: stop retrying so the lockout never trips on its own
+      else if (!S.loaded) login(e.message); else { S.toast = '⚠ ' + e.message; renderMain(); }
+    }
   }
   function say(t) { S.toast = t; const el = document.getElementById('crmToast'); if (el) { el.textContent = t; el.classList.toggle('hidden', !t); } clearTimeout(say.t); if (t) say.t = setTimeout(() => say(''), 4000); }
 

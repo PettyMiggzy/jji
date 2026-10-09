@@ -71,7 +71,7 @@
         } else tr.innerHTML = '';
         var open = d.requests.filter(function (r) { return r.status !== 'done'; }).length;
         box.querySelector('#jReqs').innerHTML = (open ? '<span class="text-ember font-semibold">' + open + ' in progress</span><br>' : '') + (d.requests[0] ? 'Latest: #' + d.requests[0].id + ' ' + esc(d.requests[0].status) : '');
-      }).catch(function (e) { err.textContent = e.message; });
+      }).catch(function (e) { err.textContent = e.message; if (/PIN/.test(e.message)) { clearInterval(chatTimer); try { sessionStorage.removeItem('jjadmin'); } catch (x) {} } });
     }
     box.querySelector('#jFile').onchange = function (e) {
       var files = Array.prototype.slice.call(e.target.files || [], 0, 4 - pending.length);

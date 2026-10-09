@@ -1,18 +1,12 @@
 // Owner dashboard API. Needs ADMIN_PIN (header x-admin-pin). Works across all sites because they share one database.
-import { db, ensureTable } from './_lib.js';
+import { db, ensureTable, adminGate } from './_lib.js';
 import { uploadToGbp, gbpConfigured } from './_gbp.js';
-
-function adminOk(req) {
-  const ap = process.env.ADMIN_PIN || '', got = String(req.headers['x-admin-pin'] || '');
-  if (!ap || got.length !== ap.length) return false;
-  let d = 0; for (let i = 0; i < ap.length; i++) d |= ap.charCodeAt(i) ^ got.charCodeAt(i);
-  return d === 0;
-}
 
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
-  if (!adminOk(req)) return res.status(401).json({ error: 'Admin PIN required' });
-  const sql = db(); if (!sql) return res.status(503).json({ error: 'Database not configured' });
+  const sql = db();
+  if (!(await adminGate(req, res, sql))) return;
+  if (!sql) return res.status(503).json({ error: 'Database not configured' });
   try {
     await ensureTable(sql);
     if (req.method === 'GET') {

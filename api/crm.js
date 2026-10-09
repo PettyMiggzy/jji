@@ -1,6 +1,6 @@
 // Owner CRM: every quote request from every site lands in `leads`; this endpoint lets the owner work them (status, schedule, crew, amounts, follow-ups, a full activity timeline)
 // and add phone leads by hand. Needs ADMIN_PIN (header x-admin-pin). All sites share one database, so one CRM covers them all.
-import { db, ensureTable, adminOk, clean } from './_lib.js';
+import { db, ensureTable, adminGate, clean } from './_lib.js';
 
 const STATUSES = ['new', 'contacted', 'quoted', 'booked', 'done', 'lost'];
 const SOURCES = ['website', 'ad', 'phone', 'referral', 'other'];
@@ -12,8 +12,9 @@ const when = v => { if (v === '' || v == null) return null; const t = Date.parse
 
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
-  if (!adminOk(req)) return res.status(401).json({ error: 'Admin PIN required' });
-  const sql = db(); if (!sql) return res.status(503).json({ error: 'Database not configured' });
+  const sql = db();
+  if (!(await adminGate(req, res, sql))) return;
+  if (!sql) return res.status(503).json({ error: 'Database not configured' });
   try {
     await ensureTable(sql);
     if (req.method === 'GET') {
