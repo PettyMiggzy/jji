@@ -21,6 +21,11 @@ export async function ensureTable(sql) {
   await sql`ALTER TABLE leads ADD COLUMN IF NOT EXISTS job_amount NUMERIC(10,2)`;
   await sql`ALTER TABLE leads ADD COLUMN IF NOT EXISTS follow_up DATE`;
   await sql`ALTER TABLE leads ADD COLUMN IF NOT EXISTS contacted_at TIMESTAMPTZ`;
+  await sql`ALTER TABLE leads ADD COLUMN IF NOT EXISTS scheduled_for TIMESTAMPTZ`;
+  await sql`ALTER TABLE leads ADD COLUMN IF NOT EXISTS assigned TEXT NOT NULL DEFAULT ''`;
+  await sql`ALTER TABLE leads ADD COLUMN IF NOT EXISTS lost_reason TEXT NOT NULL DEFAULT ''`;
+  await sql`CREATE TABLE IF NOT EXISTS lead_events (id SERIAL PRIMARY KEY, lead_id INT NOT NULL, at TIMESTAMPTZ NOT NULL DEFAULT now(), kind TEXT NOT NULL, text TEXT NOT NULL DEFAULT '')`;
+  await sql`CREATE INDEX IF NOT EXISTS lead_events_lead ON lead_events (lead_id, at DESC)`;
   await sql`ALTER TABLE jobs ADD COLUMN IF NOT EXISTS crew_name TEXT`;
   await sql`ALTER TABLE jobs ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'done'`;
   await sql`CREATE TABLE IF NOT EXISTS crew_codes (id SERIAL PRIMARY KEY, code TEXT UNIQUE NOT NULL, name TEXT NOT NULL, active BOOLEAN NOT NULL DEFAULT true, created_at TIMESTAMPTZ NOT NULL DEFAULT now())`;
