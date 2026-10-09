@@ -37,8 +37,8 @@ export default async function handler(req, res) {
     await notifySms(`New quote (${site}): ${name} ${phone}${b.service ? ' | ' + clean(b.service, 80) : ''}${b.zip || b.city ? ' | ' + clean(b.zip || b.city, 40) : ''}${b.message || b.details ? ' | ' + clean(b.message || b.details, 300) : ''}${photoUrls.length ? ' | ' + photoUrls.length + ' photo(s): ' + photoUrls[0] : ''}`);
     if (!sql) return res.status(200).json({ ok: false, photos: photoUrls });
     await ensureTable(sql);
-    await sql`INSERT INTO leads (site, name, phone, email, service, city, zip, address, message, page, photos)
-      VALUES (${site}, ${name}, ${phone}, ${clean(b.email, 120)}, ${clean(b.service, 80)}, ${clean(b.city, 80)}, ${clean(b.zip, 12)}, ${clean(b.address, 160)}, ${clean(b.message || b.details, 800)}, ${clean(b.page || b.subject, 160)}, ${JSON.stringify(photoUrls)}::jsonb)`;
+    await sql`INSERT INTO leads (site, name, phone, email, service, city, zip, address, message, page, photos, source)
+      VALUES (${site}, ${name}, ${phone}, ${clean(b.email, 120)}, ${clean(b.service, 80)}, ${clean(b.city, 80)}, ${clean(b.zip, 12)}, ${clean(b.address, 160)}, ${clean(b.message || b.details, 800)}, ${clean(b.page || b.subject, 160)}, ${JSON.stringify(photoUrls)}::jsonb, ${b.source === 'ad' ? 'ad' : 'website'})`;
     return res.status(201).json({ ok: true, photos: photoUrls });
   } catch (e) { console.error(e); return res.status(200).json({ ok: false }); }
 }
