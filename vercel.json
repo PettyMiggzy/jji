@@ -42,23 +42,13 @@
  ],
  "redirects": [
   {
-   "source": "/crm",
-   "destination": "/admin/crm/",
-   "permanent": false
-  },
-  {
-   "source": "/crm/",
-   "destination": "/admin/crm/",
-   "permanent": false
-  },
-  {
    "source": "/CRM",
-   "destination": "/admin/crm/",
+   "destination": "/crm/",
    "permanent": false
   },
   {
    "source": "/CRM/",
-   "destination": "/admin/crm/",
+   "destination": "/crm/",
    "permanent": false
   },
   {

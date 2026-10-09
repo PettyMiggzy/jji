@@ -349,9 +349,9 @@ def admin_page():
     write(path, head("Dashboard", "Owner dashboard", path, "", '<meta name="robots" content="noindex, nofollow">').replace('<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">', "") + header() + body + footer().replace("/assets/form.js", "/assets/admin.js"))
 
 def crm_page():
-    path = "/admin/crm/"
     body = f"""<main class="pt-28 pb-24"><div class="max-w-7xl mx-auto px-5"><div class="flex flex-wrap items-end justify-between gap-3 mb-6"><div><h1 class="display text-4xl font-extrabold mb-1">Customer CRM</h1><p class="text-bone/60">Every quote request from all six sites, worked as a pipeline. Needs the admin PIN.</p></div><a href="/admin/" class="text-sm text-ember underline">Back to dashboard</a></div><div id="crmApp"></div></div></main>"""
-    write(path, head("CRM", "Owner CRM", path, "", '<meta name="robots" content="noindex, nofollow">').replace('<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">', "") + header() + body + footer().replace("/assets/form.js", "/assets/crm.js"))
+    for path in ("/crm/", "/admin/crm/"):  # same page at the short address and the old one
+        write(path, head("CRM", "Owner CRM", path, "", '<meta name="robots" content="noindex, nofollow">').replace('<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">', "") + header() + body + footer().replace("/assets/form.js", "/assets/crm.js"))
 
 def build():
     work_page(); crew_page(); admin_page(); crm_page()
