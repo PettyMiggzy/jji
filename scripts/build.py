@@ -345,7 +345,7 @@ def crew_page():
 def admin_page():
     path = "/admin/"
     names = {k: {"name": v["name"], "domain": DOMAINS[k]} for k, v in ROUTES.items()}
-    body = f"""<main class="pt-28 pb-24"><div class="max-w-6xl mx-auto px-5"><h1 class="display text-4xl font-extrabold mb-2">Owner dashboard</h1><p class="text-bone/60 mb-8">All sites in one place: jobs, Google posting status and quick controls. Needs the admin PIN.</p><a href="/admin/crm/" class="inline-flex items-center gap-2 rounded-xl bg-ember text-ink font-extrabold px-5 py-3 mb-8 mr-3">Open customer CRM &rarr;</a><a href="https://jji-lead-tool.onrender.com/" target="_blank" rel="noopener" class="inline-flex items-center gap-2 rounded-xl bg-ember text-ink font-extrabold px-5 py-3 mb-8 hover:opacity-90">Open marketing / lead tool &rarr;</a><div id="adminApp" data-sites='{json.dumps(names)}'></div></div></main>"""
+    body = f"""<main class="pt-28 pb-24"><div class="max-w-6xl mx-auto px-5"><h1 class="display text-4xl font-extrabold mb-2">Owner dashboard</h1><p class="text-bone/60 mb-8">All sites in one place: jobs, Google posting status and quick controls. Needs the admin PIN.</p><div id="adminApp" data-sites='{json.dumps(names)}'></div></div></main>"""
     write(path, head("Dashboard", "Owner dashboard", path, "", '<meta name="robots" content="noindex, nofollow">').replace('<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">', "") + header() + body + footer().replace("/assets/form.js", "/assets/admin.js"))
 
 def crm_page():

@@ -42,6 +42,26 @@
  ],
  "redirects": [
   {
+   "source": "/crm",
+   "destination": "/admin/crm/",
+   "permanent": false
+  },
+  {
+   "source": "/crm/",
+   "destination": "/admin/crm/",
+   "permanent": false
+  },
+  {
+   "source": "/CRM",
+   "destination": "/admin/crm/",
+   "permanent": false
+  },
+  {
+   "source": "/CRM/",
+   "destination": "/admin/crm/",
+   "permanent": false
+  },
+  {
    "source": "/basement-cleanout-indianapolis",
    "destination": "/garage-cleanouts-indianapolis/",
    "permanent": true
