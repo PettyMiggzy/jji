@@ -115,8 +115,8 @@ export default async function handler(req, res) {
       const sites = Array.isArray(reqIn.sites) ? reqIn.sites.join(', ') : String(reqIn.sites || 'all');
       const [row] = await sql`INSERT INTO jarvis_requests (sites, page, summary, urgency, images) VALUES (${clean(sites, 120)}, ${clean(reqIn.page, 200)}, ${clean(reqIn.summary, 3000)}, ${reqIn.urgency === 'urgent' ? 'urgent' : 'normal'}, ${JSON.stringify(allImgs)}::jsonb) RETURNING id`;
       if (!reply) reply = 'Got it. Your request is filed and King Petty has been notified. You will see progress right here.';
-      filed = { id: row.id, urgent: reqIn.urgency === 'urgent', text: `${sites}${reqIn.page ? ' / ' + reqIn.page : ''}: ${clean(reqIn.summary, 1500)}` };
-      await notifyOwner(`Jarvis request #${row.id}${filed.urgent ? ' (URGENT)' : ''}`, filed.text);   // text alert if configured
+      filed = { id: row.id, urgent: reqIn.urgency === 'urgent', text: `${sites}${reqIn.page ? ' / ' + reqIn.page : ''}: ${clean(reqIn.summary, 1500)}`, images: allImgs };   // photo links go in the email too (they were saved but never mentioned in it)
+      await notifyOwner(`Jarvis request #${row.id}${filed.urgent ? ' (URGENT)' : ''}`, filed.text + (allImgs.length ? ` [${allImgs.length} photo${allImgs.length > 1 ? 's' : ''}]` : ''));   // text alert if configured
     }
     if (!reply) reply = 'Sorry, I did not catch that. Can you say it again?';
     await sql`INSERT INTO jarvis_messages (role, content) VALUES ('assistant', ${reply.trim()})`;
