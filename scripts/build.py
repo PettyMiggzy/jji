@@ -222,6 +222,16 @@ def hero(h1, sub, crumbs_html, image="/assets/hero.webp", place="Indianapolis, I
 <div class="hidden sm:flex gap-3"><a href="tel:{PHONE_TEL}" class="inline-flex justify-center rounded-full border border-bone/25 hover:border-bone/60 font-semibold px-8 py-4 transition">Call {PHONE_DISPLAY}</a></div></div>
 <div class="lg:col-span-5">{top_form(place)}</div></div></section>"""
 
+def svc_key(s): return s["slug"].removesuffix("-indianapolis")
+
+def svc_img(s, cls="", eager=False):
+    return f'<img src="/assets/svc/{svc_key(s)}.webp" alt="{s["name"]} in Indianapolis, IN" width="800" height="450" loading="{"eager" if eager else "lazy"}" class="w-full h-full object-cover {cls}">'
+
+def svc_card(s, h="h3"):
+    return (f'<a href="/{s["slug"]}/" class="rounded-3xl bg-slate2 border border-line overflow-hidden hover:border-ember/60 transition reveal block">'
+            f'<div class="relative" style="aspect-ratio:16/9">{svc_img(s)}<span class="absolute top-3 left-3 display text-ember font-extrabold text-lg bg-ink/80 rounded-lg px-2 py-0.5">{s["icon"]}</span></div>'
+            f'<div class="p-5"><{h} class="display font-bold text-xl mb-1">{s["name"]}</{h}><p class="text-sm text-bone/60">{s["blurb"]}</p></div></a>')
+
 def write(path, html):
     p = ROOT / path.strip("/") / "index.html" if path != "/" else ROOT / "index.html"
     p.parent.mkdir(parents=True, exist_ok=True); p.write_text(html)
@@ -272,8 +282,8 @@ def service_page(s):
     items = "".join(f'<li class="flex gap-3"><span class="text-ember">✓</span><span>{i}</span></li>' for i in s["items"])
     others = "".join(f'<a href="/{o["slug"]}/" class="rounded-2xl border border-line bg-ink p-4 hover:border-ember/60 transition"><div class="font-semibold">{o["name"]}</div></a>' for o in SERVICES if o is not s)
     cities = "".join(f'<a href="/{c["slug"]}-junk-removal/" class="rounded-2xl border border-line bg-ink p-4 hover:border-ember/60 transition"><div class="font-semibold">{c["name"]}</div></a>' for c in CITIES[:8])
-    body = f'''<main>{hero(s['h1'], s['blurb'], crumb_html([("Home","/"),("Services","/services/"),(s['name'],path)]))}
-<section class="py-16"><div class="max-w-5xl mx-auto px-5 prose-j"><h2>{s['name']} done right</h2><p>{s['intro']}</p>
+    body = f'''<main>{hero(s['h1'], s['blurb'], crumb_html([("Home","/"),("Services","/services/"),(s['name'],path)]), image='/assets/svc/' + svc_key(s) + '.webp')}
+<section class="py-16"><div class="max-w-5xl mx-auto px-5 prose-j"><div class="rounded-3xl overflow-hidden border border-line mb-8 not-prose" style="aspect-ratio:16/9">{svc_img(s, eager=True)}</div><h2>{s['name']} done right</h2><p>{s['intro']}</p>
 <p>Pricing is based on how much room your items take up in our truck. Labor, fuel and disposal are included, and you get a firm quote before we start. Send photos to {PHONE_DISPLAY} for the fastest price.</p>
 <h2>What we take</h2><ul class="grid sm:grid-cols-2 gap-3 text-bone/80 mb-6 not-prose">{items}</ul>
 <h2>How it works</h2><p><strong>1. Send photos.</strong> Text or use the form below. <strong>2. Get a firm price.</strong> No surprises. <strong>3. We haul it.</strong> Our crew loads everything and sweeps up.</p></div></section>
@@ -281,7 +291,7 @@ def service_page(s):
 <section class="py-16"><div class="max-w-4xl mx-auto px-5"><h2 class="display text-3xl font-extrabold mb-8">{s['name']} FAQ</h2>{faq_html(s['faq'])}</div></section>
 <section class="py-16 bg-slate2 border-t border-line"><div class="max-w-5xl mx-auto px-5"><h2 class="display text-2xl font-extrabold mb-6">Where we offer {s['name'].lower()}</h2><div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-10">{cities}</div>
 <h2 class="display text-2xl font-extrabold mb-6">Other services</h2><div class="grid grid-cols-2 md:grid-cols-4 gap-3">{others}</div></div></section></main>'''
-    write(path, head(title, desc, path, schema, '<link rel="preload" as="image" href="/assets/hero.webp" fetchpriority="high">') + header() + body + footer())
+    write(path, head(title, desc, path, schema, f'<link rel="preload" as="image" href="/assets/svc/{svc_key(s)}.webp" fetchpriority="high">') + header() + body + footer())
 
 def hub(path, title, desc, h1, sub, cards, crumb_name):
     schema = ld(business_schema(), crumbs([("Home", "/"), (crumb_name, path)]))
@@ -364,7 +374,7 @@ def build():
     for s in SERVICES: service_page(s)
     cc = "".join(f'<a href="/{c["slug"]}-junk-removal/" class="rounded-2xl bg-slate2 border border-line p-6 hover:border-ember/60 transition"><h2 class="display font-bold text-xl mb-1">Junk Removal in {c["name"]}</h2><p class="text-sm text-bone/60">{c["county"]} County · {c["zips"]}</p></a>' for c in CITIES)
     hub("/areas/", "Junk Removal Service Area | Indianapolis & Central Indiana | Junk Junkies", f"Junk Junkies serves Indianapolis, Carmel, Fishers, Noblesville, Greenwood and more across Marion, Hamilton, Hendricks, Johnson, Boone, Hancock and Morgan counties. Call {PHONE_DISPLAY}.", "Junk Removal Service Area", "Indianapolis and the whole donut around it: Marion, Hamilton, Hendricks, Johnson, Boone, Hancock and Morgan counties.", cc, "Service Area")
-    sc = "".join(f'<a href="/{s["slug"]}/" class="rounded-2xl bg-slate2 border border-line p-6 hover:border-ember/60 transition"><div class="display text-ember font-extrabold mb-2">{s["icon"]}</div><h2 class="display font-bold text-xl mb-1">{s["name"]}</h2><p class="text-sm text-bone/60">{s["blurb"]}</p></a>' for s in SERVICES)
+    sc = "".join(svc_card(s, "h2") for s in SERVICES)
     hub("/services/", "Junk Removal Services Indianapolis | Cleanouts, Furniture, Appliances | Junk Junkies", f"Basement and estate cleanouts, furniture and appliance removal, storm debris, demolition and commercial junk removal in Indianapolis. Call {PHONE_DISPLAY}.", "Junk Removal Services", "Everything from a single couch to a whole-house cleanout, hauled away with upfront pricing.", sc, "Services")
 
     # sitemap / robots / manifest / llms / 404
