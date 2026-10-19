@@ -232,6 +232,10 @@ def svc_card(s, h="h3"):
             f'<div class="relative" style="aspect-ratio:16/9">{svc_img(s)}<span class="absolute top-3 left-3 display text-ember font-extrabold text-lg bg-ink/80 rounded-lg px-2 py-0.5">{s["icon"]}</span></div>'
             f'<div class="p-5"><{h} class="display font-bold text-xl mb-1">{s["name"]}</{h}><p class="text-sm text-bone/60">{s["blurb"]}</p></div></a>')
 
+def svc_tile(s):
+    return (f'<a href="/{s["slug"]}/" class="rounded-2xl border border-line bg-ink overflow-hidden hover:border-ember/60 transition block">'
+            f'<div style="aspect-ratio:16/9">{svc_img(s)}</div><div class="p-3 font-semibold text-sm">{s["name"]}</div></a>')
+
 def write(path, html):
     p = ROOT / path.strip("/") / "index.html" if path != "/" else ROOT / "index.html"
     p.parent.mkdir(parents=True, exist_ok=True); p.write_text(html)
@@ -253,7 +257,7 @@ def city_page(c):
         {"@context": "https://schema.org", "@type": "Service", "name": f"Junk Removal in {c['name']}, IN", "serviceType": "Junk removal", "provider": {"@id": BIZ_ID},
          "areaServed": {"@type": "City", "name": f"{c['name']}, IN", "geo": {"@type": "GeoCoordinates", "latitude": c["lat"], "longitude": c["lon"]}}, "url": BASE + path},
         crumbs([("Home", "/"), ("Service Area", "/areas/"), (c["name"], path)]), faq_schema(faq))
-    svc_cards = "".join(f'<a href="/{s["slug"]}/" class="rounded-2xl bg-slate2 border border-line p-6 hover:border-ember/60 transition"><div class="display text-ember font-extrabold mb-2">{s["icon"]}</div><h3 class="display font-bold text-lg mb-1">{s["name"]}</h3><p class="text-sm text-bone/60">{s["blurb"]}</p></a>' for s in SERVICES[:6])
+    svc_cards = "".join(svc_card(s) for s in SERVICES[:6])
     area_pills = "".join(f'<li class="rounded-full border border-line bg-slate2 px-4 py-2 text-sm">{a}</li>' for a in c["areas"])
     near_links = "".join(f'<a href="/{x["slug"]}-junk-removal/" class="rounded-2xl border border-line bg-ink p-4 hover:border-ember/60 transition"><div class="font-semibold">{x["name"]}</div><div class="text-xs text-bone/50">{x["county"]} County</div></a>' for x in near)
     body = f'''<main>{hero(f"Junk Removal in {c['name']}, Indiana", f"Furniture, appliances, cleanouts and demolition hauled away. Licensed &amp; insured, with upfront pricing before we lift a finger. Serving {c['name']} and all of {c['county']} County.", crumb_html([("Home","/"),("Service Area","/areas/"),(c['name'],path)]))}
@@ -280,7 +284,7 @@ def service_page(s):
         {"@context": "https://schema.org", "@type": "Service", "name": s["h1"], "serviceType": s["name"], "provider": {"@id": BIZ_ID}, "areaServed": {"@type": "City", "name": "Indianapolis, IN"}, "url": BASE + path},
         crumbs([("Home", "/"), ("Services", "/services/"), (s["name"], path)]), faq_schema(s["faq"]))
     items = "".join(f'<li class="flex gap-3"><span class="text-ember">✓</span><span>{i}</span></li>' for i in s["items"])
-    others = "".join(f'<a href="/{o["slug"]}/" class="rounded-2xl border border-line bg-ink p-4 hover:border-ember/60 transition"><div class="font-semibold">{o["name"]}</div></a>' for o in SERVICES if o is not s)
+    others = "".join(svc_tile(o) for o in SERVICES if o is not s)
     cities = "".join(f'<a href="/{c["slug"]}-junk-removal/" class="rounded-2xl border border-line bg-ink p-4 hover:border-ember/60 transition"><div class="font-semibold">{c["name"]}</div></a>' for c in CITIES[:8])
     body = f'''<main>{hero(s['h1'], s['blurb'], crumb_html([("Home","/"),("Services","/services/"),(s['name'],path)]), image='/assets/svc/' + svc_key(s) + '.webp')}
 <section class="py-16"><div class="max-w-5xl mx-auto px-5 prose-j"><div class="rounded-3xl overflow-hidden border border-line mb-8 not-prose" style="aspect-ratio:16/9">{svc_img(s, eager=True)}</div><h2>{s['name']} done right</h2><p>{s['intro']}</p>
